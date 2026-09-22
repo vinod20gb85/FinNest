@@ -1,0 +1,1981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Financial AI</title>
+
+<style>
+:root {
+    --bg: #f4f7fb;
+    --surface: #ffffff;
+    --surface-soft: #f8fafc;
+    --border: #e5e7eb;
+    --text: #172033;
+    --muted: #6b7280;
+
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+
+    --green: #16a34a;
+    --green-bg: #ecfdf3;
+
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+
+    --shadow:
+        0 10px 30px rgba(15, 23, 42, 0.07);
+
+    --radius: 18px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* ------------------------------
+   Layout
+------------------------------ */
+
+.app {
+    min-height: 100vh;
+}
+
+.topbar {
+    height: 72px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 32px;
+
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo {
+    width: 42px;
+    height: 42px;
+
+    border-radius: 12px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: white;
+    font-size: 21px;
+    font-weight: 800;
+
+    background:
+        linear-gradient(
+            135deg,
+            #6366f1,
+            #4f46e5
+        );
+
+    box-shadow:
+        0 6px 16px rgba(79,70,229,0.25);
+}
+
+.brand-title {
+    font-size: 18px;
+    font-weight: 750;
+}
+
+.brand-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #22c55e;
+
+    box-shadow:
+        0 0 0 4px rgba(34,197,94,0.12);
+}
+
+/* ------------------------------
+   Main
+------------------------------ */
+
+.container {
+    width: min(1400px, calc(100% - 48px));
+    margin: 0 auto;
+    padding: 32px 0 50px;
+}
+
+.page-heading {
+    margin-bottom: 28px;
+}
+
+.page-heading h1 {
+    margin: 0;
+    font-size: clamp(25px, 3vw, 34px);
+    letter-spacing: -0.7px;
+}
+
+.page-heading p {
+    margin: 7px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+/* ------------------------------
+   Summary cards
+------------------------------ */
+
+.cards {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 18px;
+
+    margin-bottom: 22px;
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+
+    padding: 22px;
+
+    box-shadow: var(--shadow);
+
+    position: relative;
+    overflow: hidden;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 14px 35px rgba(15,23,42,0.10);
+}
+
+.card::after {
+    content: "";
+
+    position: absolute;
+
+    width: 90px;
+    height: 90px;
+
+    right: -25px;
+    bottom: -30px;
+
+    border-radius: 50%;
+
+    opacity: 0.08;
+}
+
+.card.income-card::after {
+    background: var(--green);
+}
+
+.card.expense-card::after {
+    background: var(--red);
+}
+
+.card.balance-card::after {
+    background: var(--primary);
+}
+
+.card-label {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-icon {
+    width: 32px;
+    height: 32px;
+
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 15px;
+}
+
+.icon-green {
+    background: var(--green-bg);
+    color: var(--green);
+}
+
+.icon-red {
+    background: var(--red-bg);
+    color: var(--red);
+}
+
+.icon-blue {
+    background: var(--blue-bg);
+    color: var(--blue);
+}
+
+.amount {
+    margin-top: 17px;
+
+    font-size: clamp(25px, 3vw, 32px);
+    font-weight: 800;
+
+    letter-spacing: -0.7px;
+}
+
+.amount.income {
+    color: var(--green);
+}
+
+.amount.expense {
+    color: var(--red);
+}
+
+.amount.balance {
+    color: var(--primary);
+}
+
+/* ------------------------------
+   Grid
+------------------------------ */
+
+.main-grid {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1.4fr)
+        minmax(320px, 0.8fr);
+
+    gap: 22px;
+
+    align-items: start;
+}
+
+.panel {
+    background: var(--surface);
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+
+    padding: 22px;
+
+    box-shadow: var(--shadow);
+}
+
+.panel + .panel {
+    margin-top: 22px;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    margin-bottom: 20px;
+}
+
+.panel-title {
+    margin: 0;
+
+    font-size: 17px;
+    font-weight: 750;
+}
+
+.panel-description {
+    margin: 5px 0 0;
+
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* ------------------------------
+   Report
+------------------------------ */
+
+.report-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+
+    margin-bottom: 18px;
+}
+
+select,
+input {
+    width: 100%;
+
+    border: 1px solid var(--border);
+
+    background: var(--surface);
+
+    color: var(--text);
+
+    border-radius: 11px;
+
+    padding: 11px 13px;
+
+    font-size: 14px;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+select:focus,
+input:focus {
+    border-color: var(--primary);
+
+    box-shadow:
+        0 0 0 3px rgba(79,70,229,0.10);
+}
+
+button {
+    border: 0;
+
+    background: var(--primary);
+    color: white;
+
+    border-radius: 11px;
+
+    padding: 11px 16px;
+
+    font-size: 13px;
+    font-weight: 650;
+
+    cursor: pointer;
+
+    white-space: nowrap;
+
+    transition:
+        background 0.2s,
+        transform 0.15s;
+}
+
+button:hover {
+    background: var(--primary-dark);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+button.secondary {
+    background: var(--surface-soft);
+    color: var(--text);
+
+    border: 1px solid var(--border);
+}
+
+button.secondary:hover {
+    background: #eef2f7;
+}
+
+.report-box {
+    background: var(--surface-soft);
+
+    border: 1px solid var(--border);
+
+    border-radius: 13px;
+
+    padding: 18px;
+
+    min-height: 150px;
+
+    white-space: pre-line;
+
+    font-size: 14px;
+
+    line-height: 1.7;
+}
+
+.form-group {
+    margin-bottom: 13px;
+}
+
+.form-group label {
+    display: block;
+
+    margin-bottom: 6px;
+
+    font-size: 12px;
+    font-weight: 650;
+
+    color: var(--muted);
+}
+
+.expense-message {
+    margin-top: 12px;
+
+    min-height: 20px;
+
+    font-size: 13px;
+
+    text-align: center;
+}
+
+.expense-message.success {
+    color: var(--green);
+}
+
+.expense-message.error {
+    color: var(--red);
+}
+
+.expense-form input,
+.expense-form select {
+    width: 100%;
+}
+
+
+/* ------------------------------
+   Transactions
+------------------------------ */
+
+.transaction-wrapper {
+    overflow-x: auto;
+}
+
+.transactions {
+    width: 100%;
+    border-collapse: collapse;
+
+    font-size: 13px;
+}
+
+.transactions th {
+    text-align: left;
+
+    color: var(--muted);
+
+    font-size: 11px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    padding: 10px 8px;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.transactions td {
+    padding: 13px 8px;
+
+    border-bottom: 1px solid #eef1f5;
+
+    white-space: nowrap;
+}
+
+.transactions tr:last-child td {
+    border-bottom: none;
+}
+
+.tx-description {
+    color: var(--muted);
+    max-width: 190px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tx-category {
+    display: inline-flex;
+
+    padding: 5px 9px;
+
+    border-radius: 999px;
+
+    background: #f1f5f9;
+
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.tx-income {
+    color: var(--green);
+    font-weight: 750;
+}
+
+.tx-expense {
+    color: var(--red);
+    font-weight: 750;
+}
+
+/* ------------------------------
+   Empty / loading
+------------------------------ */
+
+.empty {
+    color: var(--muted);
+
+    text-align: center;
+
+    padding: 28px 10px;
+
+    font-size: 13px;
+}
+
+.loading {
+    color: var(--muted);
+
+    animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+    50% {
+        opacity: 0.45;
+    }
+}
+
+/* ------------------------------
+   Footer
+------------------------------ */
+
+.footer {
+    text-align: center;
+
+    margin-top: 35px;
+
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+.month-picker {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    width: 100%;
+}
+
+.month-picker label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    color: var(--muted);
+
+    font-size: 11px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    flex: 1;
+}
+
+.month-picker input {
+    width: 100%;
+}
+
+@media (max-width: 700px) {
+
+    .month-picker {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .month-picker button {
+        width: 100%;
+    }
+}
+
+/* ------------------------------
+   Responsive
+------------------------------ */
+
+@media (max-width: 1000px) {
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+
+    .topbar {
+        height: auto;
+        padding: 15px 18px;
+    }
+
+    .status {
+        display: none;
+    }
+
+    .container {
+        width: min(100% - 28px, 1400px);
+
+        padding-top: 24px;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+
+        gap: 12px;
+    }
+
+    .card {
+        padding: 18px;
+    }
+
+    .amount {
+        margin-top: 12px;
+    }
+
+    .panel {
+        padding: 17px;
+    }
+
+    .panel-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .report-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .chat-input-row {
+        flex-direction: column;
+    }
+
+    .chat-input-row button {
+        width: 100%;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- TOP BAR -->
+
+    <header class="topbar">
+
+        <div class="brand">
+
+            <div class="logo">
+                ₹
+            </div>
+
+            <div>
+                <div class="brand-title">
+                    Financial AI
+                </div>
+
+                <div class="brand-subtitle">
+                    Personal finance dashboard
+                </div>
+            </div>
+
+        </div>
+
+        <div class="status">
+            <span class="status-dot"></span>
+            Raspberry Pi Online
+        </div>
+
+    </header>
+
+
+    <!-- MAIN -->
+
+    <main class="container">
+
+        <section class="page-heading">
+
+            <h1>
+                Good day 👋
+            </h1>
+
+            <p>
+                Here's an overview of your finances.
+            </p>
+
+        </section>
+
+
+        <!-- SUMMARY CARDS -->
+
+        <section class="cards">
+
+            <div class="card income-card">
+
+                <div class="card-label">
+
+                    <span class="card-icon icon-green">
+                        ↑
+                    </span>
+
+                    Income
+
+                </div>
+
+                <div
+                    id="income"
+                    class="amount income"
+                >
+                    ₹0
+                </div>
+
+            </div>
+
+
+            <div class="card expense-card">
+
+                <div class="card-label">
+
+                    <span class="card-icon icon-red">
+                        ↓
+                    </span>
+
+                    Expenses
+
+                </div>
+
+                <div
+                    id="expenses"
+                    class="amount expense"
+                >
+                    ₹0
+                </div>
+
+            </div>
+
+
+            <div class="card balance-card">
+
+                <div class="card-label">
+
+                    <span class="card-icon icon-blue">
+                        ₹
+                    </span>
+
+                    Balance
+
+                </div>
+
+                <div
+                    id="balance"
+                    class="amount balance"
+                >
+                    ₹0
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- CONTENT -->
+
+        <section class="main-grid">
+
+            <!-- LEFT COLUMN -->
+
+            <div>
+
+                <!-- REPORT -->
+
+                <div class="panel">
+
+                    <div class="panel-header">
+
+                        <div>
+                            <h2 class="panel-title">
+                                Monthly Report
+                            </h2>
+
+                            <p class="panel-description">
+                                Review your income and spending.
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="report-controls">                    
+
+                     <div class="month-picker">
+    <label for="reportMonth">Select month</label>
+
+    <input
+        type="month"
+        id="reportMonth"
+    >
+
+    <button onclick="loadReport()">
+        View Report
+    </button>
+</div>   
+
+                    </div>
+
+
+                    <div id="report" class="report-box loading">
+                        Loading report...
+                    </div>
+
+                </div>
+
+
+                <!-- TRANSACTIONS -->
+
+                <div class="panel">
+
+                    <div class="panel-header">
+
+                        <div>
+							<h2
+								id="transactionsTitle"
+								class="panel-title"
+							>
+								Current Month Transactions
+							</h2>
+
+							<p
+								id="transactionsDescription"
+								class="panel-description"
+							>
+								Your latest transactions this month.
+							</p>
+                        </div>
+
+                        <button
+                            class="secondary"
+                            onclick="loadTransactions()"
+                        >
+                            ↻ Refresh
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        id="transactions"
+                        class="transaction-wrapper"
+                    >
+                        <div class="empty loading">
+                            Loading transactions...
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- RIGHT COLUMN -->
+
+            <div>              
+
+<!-- YEARLY REPORT -->
+
+<div class="panel">
+
+    <div class="panel-header">
+
+        <div>
+            <h2 class="panel-title">
+                📊 Yearly Report
+            </h2>
+
+            <p class="panel-description">
+                Review your finances for an Indian financial year.
+            </p>
+        </div>
+
+    </div>
+
+
+    <div class="report-controls">
+
+        <div class="month-picker">
+
+            <label for="reportYear">
+                Select financial year
+            </label>
+
+            <select id="reportYear">
+            </select>
+
+            <button onclick="loadYearlyReport()">
+                View Report
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div
+        id="yearlyReport"
+        class="report-box"
+    >
+        Select a financial year to view the report.
+    </div>
+
+</div>
+
+
+<!-- QUICK ADD TRANSACTION -->
+
+<div class="panel">
+
+    <div class="panel-header">
+
+        <div>
+            <h2 class="panel-title">
+                ➕ Quick Add Transaction
+            </h2>
+
+            <p class="panel-description">
+                Record an income or expense with a specific date.
+            </p>
+        </div>
+
+    </div>
+
+
+    <div class="expense-form">
+
+        <!-- TYPE -->
+
+        <div class="form-group">
+
+            <label for="transactionType">
+                Type
+            </label>
+
+            <select id="transactionType">
+
+                <option value="expense">
+                    Expense
+                </option>
+
+                <option value="income">
+                    Income
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- AMOUNT -->
+
+        <div class="form-group">
+
+            <label for="expenseAmount">
+                Amount
+            </label>
+
+            <input
+                id="expenseAmount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="500"
+            >
+
+        </div>
+
+
+        <!-- CATEGORY -->
+
+        <div class="form-group">
+
+            <label for="expenseCategory">
+                Category
+            </label>
+
+            <select id="expenseCategory">
+
+                <option value="Food">
+                    Food
+                </option>
+
+                <option value="Groceries">
+                    Groceries
+                </option>
+
+                <option value="Transportation">
+                    Transportation
+                </option>
+
+                <option value="Fuel">
+                    Fuel
+                </option>
+
+                <option value="Rent">
+                    Rent
+                </option>
+
+                <option value="Shopping">
+                    Shopping
+                </option>
+
+                <option value="Entertainment">
+                    Entertainment
+                </option>
+
+                <option value="Bills">
+                    Bills
+                </option>
+
+                <option value="Medical">
+                    Medical
+                </option>
+
+                <option value="Other">
+                    Other
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- DATE -->
+
+        <div class="form-group">
+
+            <label for="expenseDate">
+                Date
+            </label>
+
+            <input
+                id="expenseDate"
+                type="date"
+            >
+
+        </div>
+
+
+        <!-- DESCRIPTION -->
+
+        <div class="form-group">
+
+            <label for="expenseDescription">
+                Description
+            </label>
+
+            <input
+                id="expenseDescription"
+                type="text"
+                placeholder="e.g. Weekly groceries"
+            >
+
+        </div>
+
+
+        <button
+            id="addTransactionButton"
+            onclick="addQuickExpense()"
+            style="width:100%;"
+        >
+            Add Expense
+        </button>
+
+
+        <div
+            id="expenseMessage"
+            class="expense-message"
+        ></div>
+
+    </div>
+
+</div>
+
+            </div>
+
+        </section>
+
+
+        <footer class="footer">
+            Financial AI · Raspberry Pi · Private local finance assistant
+        </footer>
+
+    </main>
+
+</div>
+
+
+<script>
+
+const INR = new Intl.NumberFormat(
+    "en-IN",
+    {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 2
+    }
+);
+
+
+/* ------------------------------
+   Helpers
+------------------------------ */
+
+function getTodayDate() {
+
+    const now = new Date();
+
+    const year =
+        now.getFullYear();
+
+    const month =
+        String(
+            now.getMonth() + 1
+        ).padStart(2, "0");
+
+    const day =
+        String(
+            now.getDate()
+        ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+const expenseCategories = [
+    "Groceries",
+    "Fruits",
+    "Transportation",
+    "Fuel",
+    "Shopping",
+    "Bills",
+    "Medical",
+    "Other"
+];
+
+const incomeCategories = [
+    "Salary",
+    "Freelance",
+    "Business",
+    "Bonus",
+    "Interest",
+    "Investment",
+    "Gift",
+    "Other"
+];
+
+
+function updateTransactionCategories() {
+
+    const type =
+        document.getElementById(
+            "transactionType"
+        ).value;
+
+    const categorySelect =
+        document.getElementById(
+            "expenseCategory"
+        );
+
+    const button =
+        document.getElementById(
+            "addTransactionButton"
+        );
+
+    const descriptionInput =
+        document.getElementById(
+            "expenseDescription"
+        );
+
+    const categories =
+        type === "income"
+            ? incomeCategories
+            : expenseCategories;
+
+
+    categorySelect.innerHTML = "";
+
+
+    for (const category of categories) {
+
+        const option =
+            document.createElement("option");
+
+        option.value = category;
+        option.textContent = category;
+
+        categorySelect.appendChild(option);
+    }
+
+
+    if (type === "income") {
+
+        button.textContent =
+            "Add Income";
+
+        descriptionInput.placeholder =
+            "e.g. Monthly salary";
+
+    } else {
+
+        button.textContent =
+            "Add Expense";
+
+        descriptionInput.placeholder =
+            "e.g. Weekly groceries";
+    }
+}
+
+
+async function addQuickExpense() {
+
+    const typeInput =
+        document.getElementById(
+            "transactionType"
+        );
+
+    const amountInput =
+        document.getElementById(
+            "expenseAmount"
+        );
+
+    const categoryInput =
+        document.getElementById(
+            "expenseCategory"
+        );
+
+    const dateInput =
+        document.getElementById(
+            "expenseDate"
+        );
+
+    const descriptionInput =
+        document.getElementById(
+            "expenseDescription"
+        );
+
+    const message =
+        document.getElementById(
+            "expenseMessage"
+        );
+
+
+    const type =
+        typeInput.value;
+
+    const amount =
+        parseFloat(
+            amountInput.value
+        );
+
+    const category =
+        categoryInput.value;
+
+    const transactionDate =
+        dateInput.value;
+
+    const description =
+        descriptionInput.value.trim();
+
+
+    // Validate amount
+
+    if (
+        !amount ||
+        amount <= 0
+    ) {
+
+        message.className =
+            "expense-message error";
+
+        message.textContent =
+            "Please enter a valid amount.";
+
+        amountInput.focus();
+
+        return;
+    }
+
+
+    // Validate date
+
+    if (!transactionDate) {
+
+        message.className =
+            "expense-message error";
+
+        message.textContent =
+            "Please select a date.";
+
+        dateInput.focus();
+
+        return;
+    }
+
+
+    message.className =
+        "expense-message";
+
+    message.textContent =
+        type === "income"
+            ? "Adding income..."
+            : "Adding expense...";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/transaction",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        type: type,
+
+                        amount: amount,
+
+                        category: category,
+
+                        description:
+                            description,
+
+                        transaction_date:
+                            transactionDate
+                    })
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Unable to add transaction."
+            );
+        }
+
+
+        message.className =
+            "expense-message success";
+
+
+        if (type === "income") {
+
+            message.textContent =
+                `✓ Added ${money(amount)} income`;
+
+        } else {
+
+            message.textContent =
+                `✓ Added ${money(amount)} expense`;
+        }
+
+
+        // Clear amount and description
+
+        amountInput.value = "";
+
+        descriptionInput.value = "";
+
+
+        // Refresh dashboard
+
+        await loadSummary();
+
+        await loadTransactions();
+
+
+        // Refresh monthly report if applicable
+
+        const selectedMonth =
+            document.getElementById(
+                "reportMonth"
+            ).value;
+
+
+        if (
+            selectedMonth ===
+            transactionDate.substring(0, 7)
+        ) {
+
+            await loadReport();
+        }
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        message.className =
+            "expense-message error";
+
+        message.textContent =
+            error.message ||
+            "Unable to add transaction.";
+    }
+}
+
+function money(value) {
+
+    return INR.format(
+        Number(value || 0)
+    );
+
+}
+
+
+function escapeHtml(value) {
+
+    const div = document.createElement("div");
+
+    div.textContent = value ?? "";
+
+    return div.innerHTML;
+
+}
+
+function getCurrentMonth() {
+    const now = new Date();
+
+    const year = now.getFullYear();
+
+    const month = String(
+        now.getMonth() + 1
+    ).padStart(2, "0");
+
+    return `${year}-${month}`;
+}
+
+
+/* ------------------------------
+   Summary
+------------------------------ */
+
+async function loadSummary() {
+
+    try {
+
+        const response =
+            await fetch("/api/summary");
+
+        if (!response.ok) {
+            throw new Error("Failed to load summary");
+        }
+
+        const data =
+            await response.json();
+
+        document.getElementById("income")
+            .textContent = money(data.income);
+
+        document.getElementById("expenses")
+            .textContent = money(data.expenses);
+
+        document.getElementById("balance")
+            .textContent = money(data.balance);
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.getElementById("income")
+            .textContent = "—";
+
+        document.getElementById("expenses")
+            .textContent = "—";
+
+        document.getElementById("balance")
+            .textContent = "—";
+    }
+
+}
+
+
+/* ------------------------------
+   Report
+------------------------------ */
+
+async function loadReport() {
+
+    const report =
+        document.getElementById("report");
+
+    const month =
+        document.getElementById("reportMonth").value;
+
+    if (!month) {
+
+        report.classList.remove("loading");
+
+        report.textContent =
+            "Please select a month.";
+
+        return;
+    }
+
+    report.classList.add("loading");
+
+    report.textContent =
+        "Loading report...";
+
+    try {
+
+        const url =
+            "/api/report?month=" +
+            encodeURIComponent(month);
+
+        const response =
+            await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(
+                "Failed to load report"
+            );
+        }
+
+        const data =
+            await response.json();
+
+        report.classList.remove("loading");
+
+        report.textContent =
+            data.report ||
+            "No report available.";
+
+    } catch (error) {
+
+        console.error(error);
+
+        report.classList.remove("loading");
+
+        report.textContent =
+            "Unable to load the report.";
+    }
+}
+
+
+/* ------------------------------
+   Transactions
+------------------------------ */
+
+async function loadTransactions() {
+
+    const container =
+        document.getElementById("transactions");
+
+    const title =
+        document.getElementById("transactionsTitle");
+
+    const description =
+        document.getElementById(
+            "transactionsDescription"
+        );
+
+    const monthInput =
+        document.getElementById("reportMonth");
+
+    const month =
+        monthInput.value;
+
+    const url =
+        "/api/transactions?month=" +
+        encodeURIComponent(month);
+
+
+    try {
+
+        const response =
+            await fetch(url);
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Failed to load transactions"
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        const transactions =
+            data.transactions || [];
+
+
+        /*
+         * Update title and description
+         * according to selected month.
+         */
+
+        if (month === getCurrentMonth()) {
+
+            title.textContent =
+                "Recent Transactions";
+
+            description.textContent =
+                "Your latest recorded activity.";
+
+        } else {
+
+            title.textContent =
+                "Transactions";
+
+            description.textContent =
+                "Transactions for the selected month, highest amount first.";
+
+        }
+
+
+        if (!transactions.length) {
+
+            container.innerHTML =
+                `<div class="empty">
+                    No transactions recorded for
+                    ${escapeHtml(month || "this month")}.
+                </div>`;
+
+            return;
+        }
+
+
+        let html = `
+            <table class="transactions">
+
+                <thead>
+
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+        `;
+
+
+        for (const tx of transactions) {
+
+            const income =
+                tx.type === "income";
+
+            const typeClass =
+                income
+                    ? "tx-income"
+                    : "tx-expense";
+
+            const sign =
+                income ? "+" : "-";
+
+
+            html += `
+
+                <tr>
+
+                    <td>
+                        ${escapeHtml(tx.date)}
+                    </td>
+
+                    <td class="${typeClass}">
+                        ${income ? "Income" : "Expense"}
+                    </td>
+
+                    <td>
+                        <span class="tx-category">
+                            ${escapeHtml(tx.category)}
+                        </span>
+                    </td>
+
+                    <td class="tx-description">
+                        ${escapeHtml(
+                            tx.description || "—"
+                        )}
+                    </td>
+
+                    <td class="${typeClass}">
+                        ${sign}${money(tx.amount)}
+                    </td>
+
+                </tr>
+
+            `;
+
+        }
+
+
+        html += `
+                </tbody>
+            </table>
+        `;
+
+
+        container.innerHTML =
+            html;
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+            '<div class="empty">Unable to load transactions.</div>';
+
+    }
+}
+
+
+/* ------------------------------
+   Initial load
+------------------------------ */
+
+    
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        const monthInput =
+            document.getElementById(
+                "reportMonth"
+            );
+
+        monthInput.value =
+            getCurrentMonth();
+
+
+        const expenseDate =
+            document.getElementById(
+                "expenseDate"
+            );
+
+        expenseDate.value =
+            getTodayDate();
+
+
+		monthInput.addEventListener(
+			"change",
+			async () => {
+
+				await loadReport();
+				await loadTransactions();
+
+			}
+		);
+		
+		const transactionType =
+    document.getElementById(
+        "transactionType"
+    );
+
+transactionType.addEventListener(
+    "change",
+    updateTransactionCategories
+);
+
+         // Yearly report
+         populateYearSelector(); 
+         loadYearlyReport();
+
+        // Dashboard
+        loadSummary();
+        loadReport();
+        loadTransactions();
+        
+        updateTransactionCategories();
+
+    }
+);
+
+
+/* ------------------------------
+   Yearly Report
+------------------------------ */
+
+function getCurrentFinancialYear() {
+
+    const now = new Date();
+
+    if (now.getMonth() + 1 >= 4) {
+        return now.getFullYear();
+    }
+
+    return now.getFullYear() - 1;
+}
+
+
+function populateYearSelector() {
+
+    const select =
+        document.getElementById("reportYear");
+
+    const currentYear =
+        getCurrentFinancialYear();
+
+    const startYear = 2023;
+
+    select.innerHTML = "";
+
+    for (
+        let year = currentYear;
+        year >= startYear;
+        year--
+    ) {
+
+        const option =
+            document.createElement("option");
+
+        option.value = year;
+
+        option.textContent =
+            `FY ${year}-${String(year + 1).slice(-2)}`;
+
+        select.appendChild(option);
+    }
+
+    select.value = currentYear;
+}
+
+
+async function loadYearlyReport() {
+
+    const select =
+        document.getElementById("reportYear");
+
+    const report =
+        document.getElementById("yearlyReport");
+
+    const year =
+        select.value;
+
+    if (!year) {
+
+        report.textContent =
+            "Please select a financial year.";
+
+        return;
+    }
+
+    report.classList.add("loading");
+
+    report.textContent =
+        "Loading yearly report...";
+
+    try {
+
+        const url =
+            "/api/yearly-report?year=" +
+            encodeURIComponent(year);
+
+        const response =
+            await fetch(url);
+
+        if (!response.ok) {
+
+            const data =
+                await response.json();
+
+            throw new Error(
+                data.error ||
+                "Failed to load yearly report."
+            );
+        }
+
+        const data =
+            await response.json();
+
+        report.classList.remove("loading");
+
+        report.textContent =
+            data.report ||
+            "No report available.";
+
+    } catch (error) {
+
+        console.error(error);
+
+        report.classList.remove("loading");
+
+        report.textContent =
+            "Unable to load the yearly report.";
+    }
+}
+
+</script>
+
+</body>
+</html>
