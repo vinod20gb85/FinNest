@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subscription Manager</title>
+<style>
+:root{
+    --bg:#f4f7fb;
+    --surface:#fff;
+    --soft:#f8fafc;
+    --border:#e5e7eb;
+    --text:#172033;
+    --muted:#6b7280;
+    --primary:#4f46e5;
+    --primary-dark:#4338ca;
+    --green:#16a34a;
+    --green-bg:#ecfdf3;
+    --red:#dc2626;
+    --red-bg:#fef2f2;
+    --orange:#ea580c;
+    --orange-bg:#fff7ed;
+    --blue:#2563eb;
+    --blue-bg:#eff6ff;
+    --shadow:0 10px 30px rgba(15,23,42,.07);
+    --radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+    margin:0;
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+}
+button,input,select,textarea{font:inherit}
+.app{min-height:100vh}
+.topbar{
+    height:72px;
+    background:rgba(255,255,255,.94);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 32px;
+    position:sticky;
+    top:0;
+    z-index:100;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+    width:42px;height:42px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:21px;font-weight:800;
+    background:linear-gradient(135deg,#6366f1,#4f46e5);
+    box-shadow:0 6px 16px rgba(79,70,229,.25);
+}
+.brand-title{font-size:18px;font-weight:750}
+.brand-subtitle{font-size:12px;color:var(--muted);margin-top:2px}
+.status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.status-dot{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.12)}
+.container{width:min(1400px,calc(100% - 48px));margin:0 auto;padding:32px 0 50px}
+.page-heading{margin-bottom:28px}
+.page-heading h1{margin:0;font-size:clamp(25px,3vw,34px);letter-spacing:-.7px}
+.page-heading p{margin:7px 0 0;color:var(--muted);font-size:14px}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-bottom:22px}
+.card,.panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+}
+.card{padding:22px;position:relative;overflow:hidden}
+.card:after{content:"";position:absolute;width:90px;height:90px;right:-25px;bottom:-30px;border-radius:50%;opacity:.08}
+.card.green:after{background:var(--green)}
+.card.red:after{background:var(--red)}
+.card.blue:after{background:var(--blue)}
+.card.orange:after{background:var(--orange)}
+.card-label{color:var(--muted);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.icon-green{background:var(--green-bg);color:var(--green)}
+.icon-red{background:var(--red-bg);color:var(--red)}
+.icon-blue{background:var(--blue-bg);color:var(--blue)}
+.icon-orange{background:var(--orange-bg);color:var(--orange)}
+.amount{margin-top:17px;font-size:clamp(23px,3vw,31px);font-weight:800;letter-spacing:-.7px}
+.amount.green{color:var(--green)}
+.amount.red{color:var(--red)}
+.amount.blue{color:var(--primary)}
+.amount.orange{color:var(--orange)}
+.main-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.75fr);gap:22px;align-items:start}
+.panel{padding:22px}
+.panel + .panel{margin-top:22px}
+.panel-header{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:18px}
+.panel-title{margin:0;font-size:17px;font-weight:750}
+.panel-description{margin:5px 0 0;font-size:12px;color:var(--muted)}
+.controls{display:flex;gap:10px;align-items:center}
+input,select,textarea{
+    width:100%;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--text);
+    border-radius:11px;
+    padding:10px 12px;
+    font-size:14px;
+    outline:none;
+}
+textarea{min-height:80px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+button{
+    border:0;background:var(--primary);color:#fff;border-radius:11px;
+    padding:10px 15px;font-size:13px;font-weight:650;cursor:pointer;white-space:nowrap
+}
+button:hover{background:var(--primary-dark)}
+button.secondary{background:var(--soft);color:var(--text);border:1px solid var(--border)}
+button.secondary:hover{background:#eef2f7}
+button.danger{background:var(--red)}
+button.warning{background:var(--orange)}
+button.success{background:var(--green)}
+.filter-row{display:grid;grid-template-columns:1fr 150px 100px;gap:10px;margin-bottom:16px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:10px 8px;border-bottom:1px solid var(--border)}
+td{padding:13px 8px;border-bottom:1px solid #eef1f5;vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.name{font-weight:700}
+.subtext{color:var(--muted);font-size:11px;margin-top:3px}
+.money{font-weight:750}
+.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700}
+.badge.active{background:var(--green-bg);color:var(--green)}
+.badge.paused{background:var(--orange-bg);color:var(--orange)}
+.badge.cancelled{background:var(--red-bg);color:var(--red)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.actions button{padding:7px 9px;font-size:11px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{margin-bottom:12px}
+.form-group.full{grid-column:1/-1}
+.form-group label{display:block;margin-bottom:6px;font-size:12px;font-weight:650;color:var(--muted)}
+.checkbox{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin:8px 0 14px}
+.checkbox input{width:auto}
+.form-actions{display:flex;gap:8px}
+.message{min-height:20px;margin-top:10px;font-size:13px}
+.message.success{color:var(--green)}
+.message.error{color:var(--red)}
+.upcoming-item{
+    display:flex;justify-content:space-between;gap:12px;
+    padding:13px 0;border-bottom:1px solid #eef1f5
+}
+.upcoming-item:last-child{border-bottom:0}
+.empty{text-align:center;color:var(--muted);padding:28px 10px;font-size:13px}
+.modal{
+    position:fixed;inset:0;background:rgba(15,23,42,.45);
+    display:none;align-items:center;justify-content:center;padding:18px;z-index:200
+}
+.modal.open{display:flex}
+.modal-box{
+    background:#fff;border-radius:18px;width:min(720px,100%);
+    max-height:90vh;overflow:auto;padding:22px;box-shadow:0 25px 60px rgba(15,23,42,.2)
+}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.modal-header h2{margin:0;font-size:19px}
+.close{background:transparent;color:var(--muted);font-size:22px;padding:2px 8px}
+.close:hover{background:var(--soft);color:var(--text)}
+.history-table{margin-top:12px}
+.footer{text-align:center;margin-top:35px;color:var(--muted);font-size:12px}
+@media(max-width:1100px){.cards{grid-template-columns:repeat(2,1fr)}.main-grid{grid-template-columns:1fr}}
+@media(max-width:700px){
+    .topbar{height:auto;padding:15px 18px}.status{display:none}
+    .container{width:min(100% - 28px,1400px);padding-top:24px}
+    .cards{grid-template-columns:1fr;gap:12px}
+    .card,.panel{padding:17px}
+    .filter-row{grid-template-columns:1fr}
+    .form-grid{grid-template-columns:1fr}
+    .form-group.full{grid-column:auto}
+    .panel-header{align-items:flex-start;flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+    <div class="brand">
+        <div class="logo">↻</div>
+        <div>
+            <div class="brand-title">Subscription Manager</div>
+            <div class="brand-subtitle">Track recurring payments privately</div>
+        </div>
+    </div>
+    <div class="status"><span class="status-dot"></span> Raspberry Pi Online</div>
+</header>
+
+<main class="container">
+<section class="page-heading">
+    <h1>Subscriptions</h1>
+    <p>Keep track of active subscriptions, payment dates and recurring costs.</p>
+</section>
+
+<section class="cards">
+    <div class="card green">
+        <div class="card-label"><span class="card-icon icon-green">✓</span>Active</div>
+        <div id="activeCount" class="amount green">0</div>
+    </div>
+    <div class="card blue">
+        <div class="card-label"><span class="card-icon icon-blue">₹</span>Monthly Cost</div>
+        <div id="monthlyCost" class="amount blue">₹0</div>
+    </div>
+    <div class="card orange">
+        <div class="card-label"><span class="card-icon icon-orange">↻</span>Yearly Cost</div>
+        <div id="yearlyCost" class="amount orange">₹0</div>
+    </div>
+    <div class="card red">
+        <div class="card-label"><span class="card-icon icon-red">!</span>Due in 30 Days</div>
+        <div id="upcomingCost" class="amount red">₹0</div>
+    </div>
+</section>
+
+<section class="main-grid">
+<div>
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2 class="panel-title">My Subscriptions</h2>
+                <p class="panel-description">Add, update, pause or cancel subscriptions.</p>
+            </div>
+            <button onclick="openAdd()">＋ Add Subscription</button>
+        </div>
+
+        <div class="filter-row">
+            <input id="search" placeholder="Search subscriptions..." oninput="loadSubscriptions()">
+            <select id="statusFilter" onchange="loadSubscriptions()">
+                <option>All</option>
+                <option>Active</option>
+                <option>Paused</option>
+                <option>Cancelled</option>
+            </select>
+            <button class="secondary" onclick="loadAll()">↻ Refresh</button>
+        </div>
+
+        <div id="subscriptionTable" class="table-wrap">
+            <div class="empty">Loading...</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2 class="panel-title">Upcoming Payments</h2>
+                <p class="panel-description">Active subscriptions due in the next 30 days.</p>
+            </div>
+        </div>
+        <div id="upcoming"></div>
+    </div>
+</div>
+
+<div>
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2 class="panel-title">Add / Edit</h2>
+                <p class="panel-description">Use the form below to manage a subscription.</p>
+            </div>
+        </div>
+        <form id="subscriptionForm" onsubmit="saveSubscription(event)">
+            <input type="hidden" id="subscriptionId">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input id="name" required placeholder="Netflix">
+                </div>
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input id="amount" type="number" min="0.01" step="0.01" required placeholder="649">
+                </div>
+                <div class="form-group">
+                    <label>Billing Cycle</label>
+                    <select id="billingCycle">
+                        <option>Monthly</option>
+                        <option>Quarterly</option>
+                        <option>Half-Yearly</option>
+                        <option>Yearly</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Next Payment Date</label>
+                    <input id="nextPaymentDate" type="date" required>
+                </div>
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input id="startDate" type="date">
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <input id="category" list="categoryList" value="Other">
+                    <datalist id="categoryList">
+                        <option>Entertainment</option><option>Software</option>
+                        <option>Cloud</option><option>News</option><option>Music</option>
+                        <option>Video</option><option>Shopping</option><option>Fitness</option>
+                        <option>Education</option><option>Other</option>
+                    </datalist>
+                </div>
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <input id="paymentMethod" placeholder="Credit Card / UPI">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="status">
+                        <option>Active</option>
+                        <option>Paused</option>
+                        <option>Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-group full">
+                    <label>Description / Notes</label>
+                    <textarea id="description" placeholder="Family plan, renewal details, etc."></textarea>
+                </div>
+            </div>
+            <label class="checkbox">
+                <input id="autoRenew" type="checkbox" checked>
+                Auto-renews
+            </label>
+            <div class="form-actions">
+                <button id="saveButton" type="submit">Add Subscription</button>
+                <button type="button" class="secondary" onclick="resetForm()">Clear</button>
+            </div>
+            <div id="formMessage" class="message"></div>
+        </form>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h2 class="panel-title">Spending by Category</h2>
+                <p class="panel-description">Monthly-equivalent cost of active subscriptions.</p>
+            </div>
+        </div>
+        <div id="categories"></div>
+    </div>
+</div>
+</section>
+
+<footer class="footer">Subscription Manager · Separate subscriptions.db · Private local app</footer>
+</main>
+</div>
+
+<div id="historyModal" class="modal" onclick="if(event.target===this) closeHistory()">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 id="historyTitle">Payment History</h2>
+            <button class="close" onclick="closeHistory()">×</button>
+        </div>
+        <div id="historyContent"></div>
+    </div>
+</div>
+
+<script>
+const INR = new Intl.NumberFormat("en-IN", {
+    style:"currency", currency:"INR", maximumFractionDigits:2
+});
+
+function money(value){ return INR.format(Number(value || 0)); }
+
+function esc(value){
+    return String(value ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+}
+
+function today(){
+    const d = new Date();
+    const m = String(d.getMonth()+1).padStart(2,"0");
+    const day = String(d.getDate()).padStart(2,"0");
+    return `${d.getFullYear()}-${m}-${day}`;
+}
+
+async function api(url, options={}){
+    const response = await fetch(url, options);
+    const data = await response.json();
+    if(!response.ok) throw new Error(data.error || "Request failed.");
+    return data;
+}
+
+async function loadSummary(){
+    const data = await api("/api/subscription-summary");
+    document.getElementById("activeCount").textContent = data.active_count;
+    document.getElementById("monthlyCost").textContent = money(data.monthly_cost);
+    document.getElementById("yearlyCost").textContent = money(data.yearly_cost);
+    document.getElementById("upcomingCost").textContent = money(data.upcoming_30_days_amount);
+}
+
+async function loadSubscriptions(){
+    const status = document.getElementById("statusFilter").value;
+    const search = document.getElementById("search").value.trim();
+    const params = new URLSearchParams({status, search});
+    const data = await api("/api/subscriptions?" + params.toString());
+    const box = document.getElementById("subscriptionTable");
+
+    if(!data.subscriptions.length){
+        box.innerHTML = '<div class="empty">No subscriptions found.</div>';
+        return;
+    }
+
+    let html = `<table>
+        <thead><tr>
+            <th>Subscription</th><th>Amount</th><th>Cycle</th>
+            <th>Next Payment</th><th>Status</th><th>Actions</th>
+        </tr></thead><tbody>`;
+
+    for(const s of data.subscriptions){
+        const statusClass = s.status.toLowerCase();
+        html += `<tr>
+            <td>
+                <div class="name">${esc(s.name)}</div>
+                <div class="subtext">${esc(s.category)}${s.payment_method ? " · " + esc(s.payment_method) : ""}</div>
+            </td>
+            <td class="money">${money(s.amount)}<div class="subtext">${esc(s.currency)}</div></td>
+            <td>${esc(s.billing_cycle)}</td>
+            <td>${esc(s.next_payment_date)}</td>
+            <td><span class="badge ${statusClass}">${esc(s.status)}</span></td>
+            <td>
+                <div class="actions">
+                    <button class="secondary" onclick="editSubscription(${s.id})">Edit</button>
+                    <button class="secondary" onclick="history(${s.id}, '${esc(s.name).replaceAll("'","\\\\'")}')">History</button>
+                    ${s.status === "Active"
+                        ? `<button class="warning" onclick="changeStatus(${s.id},'Paused')">Pause</button>`
+                        : `<button class="success" onclick="changeStatus(${s.id},'Active')">Activate</button>`}
+                    ${s.status !== "Cancelled"
+                        ? `<button class="danger" onclick="changeStatus(${s.id},'Cancelled')">Cancel</button>`
+                        : ""}
+                </div>
+            </td>
+        </tr>`;
+    }
+
+    html += "</tbody></table>";
+    box.innerHTML = html;
+}
+
+async function loadUpcoming(){
+    const data = await api("/api/upcoming?days=30");
+    const box = document.getElementById("upcoming");
+
+    if(!data.upcoming.length){
+        box.innerHTML = '<div class="empty">No payments due in the next 30 days.</div>';
+        return;
+    }
+
+    box.innerHTML = data.upcoming.map(s => `
+        <div class="upcoming-item">
+            <div>
+                <div class="name">${esc(s.name)}</div>
+                <div class="subtext">${esc(s.next_payment_date)} · ${s.days_until} day${s.days_until === 1 ? "" : "s"}</div>
+            </div>
+            <div class="money">${money(s.amount)}</div>
+        </div>
+    `).join("");
+}
+
+async function loadCategories(){
+    const data = await api("/api/categories");
+    const box = document.getElementById("categories");
+
+    if(!data.categories.length){
+        box.innerHTML = '<div class="empty">No active subscriptions.</div>';
+        return;
+    }
+
+    box.innerHTML = data.categories.map(c => `
+        <div class="upcoming-item">
+            <div>
+                <div class="name">${esc(c.category)}</div>
+                <div class="subtext">${c.count} subscription${c.count === 1 ? "" : "s"}</div>
+            </div>
+            <div class="money">${money(c.monthly_equivalent)}/mo</div>
+        </div>
+    `).join("");
+}
+
+function openAdd(){
+    resetForm();
+    document.getElementById("name").focus();
+    window.scrollTo({top:document.getElementById("subscriptionForm").offsetTop - 100, behavior:"smooth"});
+}
+
+function resetForm(){
+    document.getElementById("subscriptionForm").reset();
+    document.getElementById("subscriptionId").value = "";
+    document.getElementById("category").value = "Other";
+    document.getElementById("autoRenew").checked = true;
+    document.getElementById("status").value = "Active";
+    document.getElementById("nextPaymentDate").value = today();
+    document.getElementById("startDate").value = today();
+    document.getElementById("saveButton").textContent = "Add Subscription";
+    const msg = document.getElementById("formMessage");
+    msg.textContent = "";
+    msg.className = "message";
+}
+
+async function editSubscription(id){
+    const data = await api("/api/subscriptions/" + id);
+    const s = data.subscription;
+
+    document.getElementById("subscriptionId").value = s.id;
+    document.getElementById("name").value = s.name;
+    document.getElementById("amount").value = s.amount;
+    document.getElementById("billingCycle").value = s.billing_cycle;
+    document.getElementById("nextPaymentDate").value = s.next_payment_date;
+    document.getElementById("startDate").value = s.start_date || "";
+    document.getElementById("category").value = s.category || "Other";
+    document.getElementById("paymentMethod").value = s.payment_method || "";
+    document.getElementById("status").value = s.status;
+    document.getElementById("autoRenew").checked = !!s.auto_renew;
+    document.getElementById("description").value = s.description || "";
+    document.getElementById("saveButton").textContent = "Update Subscription";
+
+    window.scrollTo({top:document.getElementById("subscriptionForm").offsetTop - 100, behavior:"smooth"});
+}
+
+async function saveSubscription(event){
+    event.preventDefault();
+
+    const id = document.getElementById("subscriptionId").value;
+    const payload = {
+        name: document.getElementById("name").value.trim(),
+        amount: Number(document.getElementById("amount").value),
+        currency: "INR",
+        billing_cycle: document.getElementById("billingCycle").value,
+        next_payment_date: document.getElementById("nextPaymentDate").value,
+        start_date: document.getElementById("startDate").value || null,
+        category: document.getElementById("category").value.trim() || "Other",
+        payment_method: document.getElementById("paymentMethod").value.trim(),
+        status: document.getElementById("status").value,
+        auto_renew: document.getElementById("autoRenew").checked,
+        description: document.getElementById("description").value.trim()
+    };
+
+    const msg = document.getElementById("formMessage");
+    msg.className = "message";
+    msg.textContent = id ? "Updating..." : "Adding...";
+
+    try{
+        const url = id ? "/api/subscriptions/" + id : "/api/subscriptions";
+        const method = id ? "PUT" : "POST";
+
+        await api(url,{
+            method,
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(payload)
+        });
+
+        msg.className = "message success";
+        msg.textContent = id ? "Subscription updated." : "Subscription added.";
+        resetForm();
+        await loadAll();
+    }catch(error){
+        msg.className = "message error";
+        msg.textContent = error.message;
+    }
+}
+
+async function changeStatus(id,status){
+    const action = status === "Cancelled" ? "cancel" : status.toLowerCase();
+    if(status === "Cancelled" && !confirm("Cancel this subscription? It will remain in your history.")) return;
+
+    try{
+        await api("/api/subscriptions/" + id + "/status",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({status})
+        });
+        await loadAll();
+    }catch(error){
+        alert(error.message);
+    }
+}
+
+async function history(id,name){
+    const data = await api("/api/subscriptions/" + id + "/payments");
+    document.getElementById("historyTitle").textContent = name + " — Payment History";
+    const box = document.getElementById("historyContent");
+
+    if(!data.payments.length){
+        box.innerHTML = `
+            <p class="subtext">No payments recorded yet.</p>
+            <button onclick="recordPayment(${id})">Record Payment</button>`;
+    }else{
+        let html = `<div class="history-table"><table>
+            <thead><tr><th>Date</th><th>Amount</th><th>Status</th><th>Notes</th></tr></thead><tbody>`;
+        for(const p of data.payments){
+            html += `<tr>
+                <td>${esc(p.payment_date)}</td>
+                <td class="money">${money(p.amount)}</td>
+                <td>${esc(p.status)}</td>
+                <td>${esc(p.notes || "")}</td>
+            </tr>`;
+        }
+        html += `</tbody></table></div>
+                 <div style="margin-top:14px"><button onclick="recordPayment(${id})">＋ Record Payment</button></div>`;
+        box.innerHTML = html;
+    }
+
+    document.getElementById("historyModal").classList.add("open");
+}
+
+function closeHistory(){
+    document.getElementById("historyModal").classList.remove("open");
+}
+
+async function recordPayment(id){
+    const paymentDate = prompt("Payment date (YYYY-MM-DD):", today());
+    if(!paymentDate) return;
+
+    const amountText = prompt("Payment amount:", "");
+    if(amountText === null) return;
+
+    const notes = prompt("Notes (optional):", "") ?? "";
+
+    try{
+        await api("/api/subscriptions/" + id + "/payments",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                payment_date:paymentDate,
+                amount:amountText === "" ? null : Number(amountText),
+                notes
+            })
+        });
+        closeHistory();
+        await loadAll();
+    }catch(error){
+        alert(error.message);
+    }
+}
+
+async function loadAll(){
+    try{
+        await Promise.all([
+            loadSummary(),
+            loadSubscriptions(),
+            loadUpcoming(),
+            loadCategories()
+        ]);
+    }catch(error){
+        console.error(error);
+    }
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+    resetForm();
+    loadAll();
+});
+</script>
+</body>
+</html>
