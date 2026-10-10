@@ -383,7 +383,11 @@ Not every email containing a payment-related word represents a subscription. Che
 
 ## License
 
-Add a `LICENSE` file and specify the project's license before inviting contributions or distributing the application.
+FinNest is licensed under the **MIT License**. You are free to use, copy, modify, distribute, and adapt this software, subject to the conditions of the licence.
+
+See the [LICENSE](LICENSE) file for the complete licence text.
+
+This project is provided "as is", without warranty of any kind. Users are responsible for securing their deployments, protecting their financial information, and configuring Gmail OAuth credentials appropriately.
 
 ## Author
 
