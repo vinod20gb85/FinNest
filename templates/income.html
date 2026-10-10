@@ -1,44 +1,736 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Income & Investment Tracker</title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f172a">
+<title>Wealth & Investment Tracker</title>
+
 <style>
-body{margin:0;background:#f4f7fb;color:#172033;font:14px Arial,sans-serif}.top{padding:18px 30px;background:white;border-bottom:1px solid #ddd;display:flex;justify-content:space-between}.container{max-width:1450px;margin:auto;padding:28px}.cards{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}.card,.panel{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:18px;box-shadow:0 6px 20px #0000000a}.value{font-size:24px;font-weight:bold;margin-top:12px}.green{color:#159447}.blue{color:#4055d6}.red{color:#d22}.grid{display:grid;grid-template-columns:1.5fr .8fr;gap:20px;margin-top:20px}.panel{margin-bottom:20px}.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}button{border:0;border-radius:9px;padding:9px 13px;background:#4f46e5;color:white;cursor:pointer}button.secondary{background:#f5f6f8;color:#222;border:1px solid #ddd}button.warn{background:#e87816}button.danger{background:#d33}button.success{background:#159447}.filters{display:grid;grid-template-columns:1fr 130px 130px 70px;gap:8px;margin-bottom:12px}input,select,textarea{width:100%;box-sizing:border-box;padding:9px;border:1px solid #ddd;border-radius:8px;font:inherit}textarea{min-height:65px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 6px;border-bottom:1px solid #eee;font-size:12px}th{font-size:10px;color:#777;text-transform:uppercase}.sub{color:#777;font-size:10px;margin-top:3px}.actions{display:flex;gap:4px;flex-wrap:wrap}.actions button{font-size:10px;padding:6px 8px}.badge{padding:4px 7px;border-radius:12px;font-size:10px}.active{background:#eaf8ef;color:#159447}.disabled{background:#fff2e6;color:#d86d12}.closed{background:#fdeaea;color:#d33}.item{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eee}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}.group label{display:block;font-size:11px;color:#777;margin-bottom:4px}.modal{display:none;position:fixed;inset:0;background:#0008;align-items:center;justify-content:center}.modal.open{display:flex}.modalbox{background:white;padding:22px;border-radius:15px;width:min(700px,92%)}.close{float:right;background:none;color:#555;font-size:22px}
-@media(max-width:1100px){.cards{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:1fr}}@media(max-width:650px){.container{padding:15px}.cards{grid-template-columns:1fr 1fr}.filters{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}}
-</style></head><body>
-<div class="top"><b>₹ Income & Investment Tracker</b><span>Separate income.db</span></div><main class="container">
-<h1>Income & Investments</h1><p>Track bonds, stocks, FDs, RDs, income and maturity dates.</p>
-<div class="cards"><div class="card">Active<div id="activeCount" class="value blue">0</div></div><div class="card">Total Invested<div id="totalInvested" class="value">₹0</div></div><div class="card">Current Value<div id="currentValue" class="value blue">₹0</div></div><div class="card">Annual Income<div id="annualIncome" class="value green">₹0</div></div><div class="card">Received This Year<div id="receivedYear" class="value green">₹0</div></div><div class="card">Maturing 90 Days<div id="maturingValue" class="value red">₹0</div></div></div>
-<div class="grid"><div>
-<div class="panel"><div class="head"><b>Investments</b><button onclick="add()">＋ Add Investment</button></div>
-<div class="filters"><input id="search" placeholder="Search..." oninput="loadInv()"><select id="af" onchange="loadInv()"><option>All</option><option>Bond</option><option>Stock</option><option>FD</option><option>RD</option><option>Mutual Fund</option><option>Other</option></select><select id="sf" onchange="loadInv()"><option>All</option><option>Active</option><option>Disabled</option><option>Closed</option></select><button class="secondary" onclick="loadAll()">↻</button></div><div id="table"></div></div>
-<div class="panel"><div class="head"><b>Upcoming Income — 90 Days</b></div><div id="upcoming"></div></div>
-<div class="panel"><div class="head"><b>Upcoming Maturities — 90 Days</b></div><div id="maturity"></div></div></div>
-<div>
-<div class="panel"><div class="head"><b>Add / Edit Investment</b></div><form id="form" onsubmit="save(event)"><input type="hidden" id="id"><div class="formgrid">
-<div class="group"><label>Asset Type</label><select id="asset"><option>Bond</option><option>Stock</option><option>FD</option><option>RD</option><option>Mutual Fund</option><option>Other</option></select></div>
-<div class="group"><label>Name</label><input id="investmentName" required></div><div class="group"><label>Issuer / Company</label><input id="issuer"></div><div class="group"><label>ISIN</label><input id="isin"></div>
-<div class="group"><label>Account / Reference</label><input id="ref"></div><div class="group"><label>Principal / Invested Amount</label><input id="principal" type="number" step=".01" required></div>
-<div class="group"><label>Units / Shares</label><input id="units" type="number" step=".000001"></div><div class="group"><label>Purchase Price</label><input id="price" type="number" step=".01"></div>
-<div class="group"><label>Current Value</label><input id="value" type="number" step=".01"></div><div class="group"><label>Interest / Coupon %</label><input id="rate" type="number" step=".0001"></div>
-<div class="group"><label>Income Type</label><select id="itype"><option>Interest</option><option>Dividend</option><option>Coupon</option><option>Capital Gain</option><option>Other</option></select></div>
-<div class="group"><label>Income Frequency</label><select id="freq"><option>Monthly</option><option>Quarterly</option><option>Half-Yearly</option><option>Yearly</option><option>One-Time</option></select></div>
-<div class="group"><label>Expected Income Amount</label><input id="iamount" type="number" step=".01"></div><div class="group"><label>Purchase Date</label><input id="purchaseDate" type="date"></div>
-<div class="group"><label>Maturity Type</label><select id="mtype" onchange="matChange()"><option>Fixed Maturity</option><option>Perpetual</option><option>No Maturity</option></select></div>
-<div class="group"><label>Maturity Date</label><input id="mdate" type="date"></div><div class="group"><label>Next Income Date</label><input id="nextIncome" type="date"></div>
-<div class="group"><label>Status</label><select id="investmentStatus"><option>Active</option><option>Disabled</option><option>Closed</option></select></div><div class="group full"><label>Notes</label><textarea id="notes"></textarea></div></div>
-<br><button id="savebtn">Add Investment</button> <button type="button" class="secondary" onclick="reset()">Clear</button><div id="msg"></div></form></div>
-<div class="panel"><div class="head"><b>Income Received</b><button class="secondary" onclick="loadIncome()">↻</button></div><div id="income"></div></div>
-<div class="panel"><b>By Asset Type</b><div id="assets"></div></div></div></div></main>
-<div id="modal" class="modal"><div class="modalbox"><button class="close" onclick="closeModal()">×</button><h3>Record Income</h3><form onsubmit="record(event)"><input type="hidden" id="iid"><div class="formgrid"><div class="group"><label>Date</label><input id="idate" type="date" required></div><div class="group"><label>Amount</label><input id="iamt" type="number" step=".01" required></div><div class="group"><label>Type</label><select id="ritype"><option>Interest</option><option>Dividend</option><option>Coupon</option><option>Capital Gain</option><option>Other</option></select></div><div class="group"><label>Status</label><select id="rstatus"><option>Received</option><option>Expected</option><option>Cancelled</option></select></div><div class="group"><label>Received Date</label><input id="rdate" type="date"></div><div class="group full"><label>Notes</label><textarea id="rnotes"></textarea></div></div><br><button>Save Income</button></form></div></div>
+:root{
+  --navy:#0f172a;
+  --navy-2:#172554;
+  --indigo:#4f46e5;
+  --indigo-soft:#eef2ff;
+  --emerald:#059669;
+  --emerald-soft:#ecfdf5;
+  --amber:#d97706;
+  --amber-soft:#fffbeb;
+  --red:#dc2626;
+  --red-soft:#fef2f2;
+  --sky:#0284c7;
+  --sky-soft:#eff6ff;
+  --page:#f5f7fb;
+  --card:#ffffff;
+  --line:#e7eaf0;
+  --text:#172033;
+  --muted:#667085;
+  --muted-2:#98a2b3;
+  --radius:18px;
+  --shadow:0 8px 28px rgba(15,23,42,.06);
+  --shadow-hover:0 14px 34px rgba(15,23,42,.10);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--page);
+  color:var(--text);
+  font:14px Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  line-height:1.45;
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+
+.topbar{
+  background:linear-gradient(135deg,var(--navy),#1e293b 65%,#26356f);
+  color:#fff;
+  min-height:72px;
+  display:flex;
+  align-items:center;
+}
+.topbar-inner{
+  width:min(1480px,calc(100% - 48px));
+  margin:auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{
+  width:40px;height:40px;border-radius:12px;
+  display:grid;place-items:center;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.14);
+  font-size:19px;
+}
+.brand-title{font-weight:750;font-size:16px;letter-spacing:-.2px}
+.brand-sub{font-size:11px;color:#cbd5e1;margin-top:1px}
+.secure-pill{
+  padding:7px 11px;border-radius:999px;
+  background:rgba(255,255,255,.09);
+  border:1px solid rgba(255,255,255,.12);
+  color:#dbeafe;font-size:11px;
+}
+
+.container{
+  width:min(1480px,calc(100% - 48px));
+  margin:auto;
+  padding:30px 0 48px;
+}
+
+.page-heading{
+  display:flex;justify-content:space-between;align-items:flex-end;
+  gap:20px;margin-bottom:24px;
+}
+.eyebrow{
+  color:var(--indigo);font-weight:750;text-transform:uppercase;
+  letter-spacing:.09em;font-size:10px;margin-bottom:5px;
+}
+h1{
+  margin:0;font-size:30px;line-height:1.15;letter-spacing:-.8px;
+}
+.page-heading p{margin:7px 0 0;color:var(--muted);font-size:13px}
+.heading-actions{display:flex;gap:9px;align-items:center}
+
+.btn{
+  border:0;border-radius:10px;padding:10px 14px;
+  font-weight:650;font-size:12px;
+  transition:.18s ease;
+}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{
+  background:var(--indigo);color:#fff;
+  box-shadow:0 5px 14px rgba(79,70,229,.20);
+}
+.btn-secondary{
+  background:#fff;color:#344054;border:1px solid var(--line);
+}
+.btn-secondary:hover{background:#f8fafc}
+.btn-warning{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
+.btn-danger{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+.btn-success{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+.btn-icon{padding:9px 11px;font-size:15px}
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:14px;
+}
+.kpi{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:18px;
+  box-shadow:var(--shadow);
+  position:relative;
+  overflow:hidden;
+}
+.kpi:after{
+  content:"";position:absolute;right:-28px;bottom:-35px;
+  width:90px;height:90px;border-radius:50%;
+  background:var(--indigo-soft);
+}
+.kpi.green:after{background:var(--emerald-soft)}
+.kpi.amber:after{background:var(--amber-soft)}
+.kpi.red:after{background:var(--red-soft)}
+.kpi.sky:after{background:var(--sky-soft)}
+.kpi-label{
+  display:flex;align-items:center;gap:8px;
+  color:var(--muted);font-size:11px;font-weight:650;
+  text-transform:uppercase;letter-spacing:.05em;
+}
+.kpi-dot{width:8px;height:8px;border-radius:50%;background:var(--indigo)}
+.kpi.green .kpi-dot{background:var(--emerald)}
+.kpi.amber .kpi-dot{background:var(--amber)}
+.kpi.red .kpi-dot{background:var(--red)}
+.kpi.sky .kpi-dot{background:var(--sky)}
+.kpi-value{
+  margin-top:10px;font-size:23px;font-weight:780;
+  letter-spacing:-.5px;position:relative;z-index:1;
+}
+.kpi-note{font-size:10px;color:var(--muted-2);margin-top:4px;position:relative;z-index:1}
+
+.dashboard-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.65fr) minmax(350px,.75fr);
+  gap:18px;
+  margin-top:18px;
+}
+.stack{min-width:0}
+.panel{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  margin-bottom:18px;
+  overflow:hidden;
+}
+.panel-head{
+  min-height:64px;padding:17px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:15px;border-bottom:1px solid var(--line);
+}
+.panel-title{font-size:14px;font-weight:750;letter-spacing:-.1px}
+.panel-subtitle{font-size:11px;color:var(--muted);margin-top:2px}
+.panel-body{padding:18px 20px}
+
+.filters{
+  display:grid;
+  grid-template-columns:minmax(160px,1fr) 140px 140px auto;
+  gap:9px;margin-bottom:14px;
+}
+.field-control{
+  width:100%;height:40px;
+  padding:0 11px;border:1px solid #dfe3ea;
+  border-radius:10px;background:#fff;color:var(--text);
+  outline:none;transition:.16s;
+}
+.field-control:focus,
+input:focus,select:focus,textarea:focus{
+  border-color:#a5b4fc;
+  box-shadow:0 0 0 3px rgba(99,102,241,.10);
+}
+.search-wrap{position:relative}
+.search-wrap span{
+  position:absolute;left:12px;top:10px;color:#98a2b3;font-size:13px;
+}
+.search-wrap input{padding-left:32px}
+
+.table-wrap{overflow:auto;margin:0 -20px}
+table{width:100%;border-collapse:collapse;min-width:850px}
+th,td{text-align:left;border-bottom:1px solid #edf0f4}
+th{
+  padding:10px 20px;background:#fafbfc;
+  color:#7b8494;font-size:9px;font-weight:750;
+  text-transform:uppercase;letter-spacing:.08em;
+  white-space:nowrap;
+}
+td{padding:13px 20px;font-size:12px;vertical-align:middle}
+tbody tr{transition:.15s}
+tbody tr:hover{background:#fafbff}
+.investment-name{font-weight:700;color:#172033}
+.muted{font-size:10px;color:var(--muted);margin-top:3px}
+.amount{font-weight:700;white-space:nowrap}
+.date{white-space:nowrap;color:#475467}
+.actions{display:flex;gap:5px;flex-wrap:wrap}
+.actions .btn{padding:6px 8px;font-size:10px}
+
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 8px;border-radius:999px;
+  font-size:10px;font-weight:700;white-space:nowrap;
+}
+.badge:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.badge.active{background:var(--emerald-soft);color:#047857}
+.badge.disabled{background:var(--amber-soft);color:#b45309}
+.badge.closed{background:var(--red-soft);color:#b91c1c}
+
+.list-item{
+  display:flex;justify-content:space-between;align-items:center;
+  gap:15px;padding:13px 0;border-bottom:1px solid #edf0f4;
+}
+.list-item:last-child{border-bottom:0}
+.list-title{font-weight:700;font-size:12px}
+.list-meta{font-size:10px;color:var(--muted);margin-top:3px}
+.list-value{font-weight:750;white-space:nowrap}
+.empty{
+  padding:20px 0;color:var(--muted);font-size:12px;text-align:center;
+}
+
+.form-section{
+  margin-bottom:20px;padding-bottom:17px;border-bottom:1px solid #edf0f4;
+}
+.form-section:last-of-type{border-bottom:0;margin-bottom:0;padding-bottom:0}
+.form-section-title{
+  font-size:11px;font-weight:750;color:#344054;
+  text-transform:uppercase;letter-spacing:.07em;margin-bottom:11px;
+}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.full{grid-column:1/-1}
+.group label{
+  display:block;font-size:10px;font-weight:650;color:#667085;margin-bottom:5px;
+}
+input,select,textarea{
+  width:100%;box-sizing:border-box;
+  min-height:40px;padding:9px 10px;
+  border:1px solid #dfe3ea;border-radius:10px;
+  background:#fff;color:var(--text);outline:none;
+}
+textarea{min-height:76px;resize:vertical}
+.form-actions{
+  display:flex;gap:8px;align-items:center;
+  padding-top:5px;
+}
+.form-message{font-size:11px;margin-left:5px}
+
+.asset-row{
+  display:grid;grid-template-columns:105px 1fr 85px;
+  align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid #edf0f4;
+}
+.asset-row:last-child{border-bottom:0}
+.asset-name{font-size:11px;font-weight:700}
+.asset-count{font-size:9px;color:var(--muted)}
+.asset-bar{height:7px;background:#eef1f6;border-radius:99px;overflow:hidden}
+.asset-fill{height:100%;background:linear-gradient(90deg,#6366f1,#818cf8);border-radius:99px}
+.asset-value{text-align:right;font-size:11px;font-weight:700}
+
+.modal{
+  display:none;position:fixed;inset:0;
+  background:rgba(15,23,42,.60);
+  backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+  z-index:1000;padding:20px;
+}
+.modal.open{display:flex}
+.modalbox{
+  background:#fff;border-radius:20px;
+  width:min(700px,100%);max-height:90vh;overflow:auto;
+  box-shadow:0 24px 70px rgba(0,0,0,.22);
+}
+.modal-head{
+  padding:18px 22px;border-bottom:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.modal-title{font-size:16px;font-weight:750}
+.close{
+  border:0;background:#f4f5f7;color:#667085;
+  width:32px;height:32px;border-radius:9px;font-size:20px;
+}
+.modal-body{padding:20px 22px}
+
+#msg{min-height:16px}
+.green{color:var(--emerald)!important}
+.red{color:var(--red)!important}
+
+@media(max-width:1250px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .dashboard-grid{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+  .topbar-inner,.container{width:min(100% - 28px,1480px)}
+  .container{padding-top:22px}
+  .page-heading{align-items:flex-start;flex-direction:column}
+  .heading-actions{width:100%}
+  .heading-actions .btn{flex:1}
+  .kpis{grid-template-columns:1fr 1fr}
+  .filters{grid-template-columns:1fr 1fr}
+  .filters .search-wrap{grid-column:1/-1}
+  .formgrid{grid-template-columns:1fr}
+  .full{grid-column:auto}
+  .panel-head{padding:15px}
+  .panel-body{padding:15px}
+  .table-wrap{margin:0 -15px}
+  th,td{padding-left:15px;padding-right:15px}
+}
+@media(max-width:480px){
+  .kpis{grid-template-columns:1fr}
+  .topbar{min-height:64px}
+  .brand-sub,.secure-pill{display:none}
+  h1{font-size:25px}
+  .filters{grid-template-columns:1fr}
+  .filters .search-wrap{grid-column:auto}
+  .asset-row{grid-template-columns:90px 1fr 75px}
+}
+
+.history-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.history-stat{padding:12px 14px;border:1px solid var(--line);background:#fafbfc;border-radius:12px}
+.history-stat-label{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.history-stat-value{margin-top:4px;font-size:16px;font-weight:780}
+.history-table{width:100%;border-collapse:collapse;min-width:580px}
+.history-table th,.history-table td{padding:11px 8px;border-bottom:1px solid #edf0f4;text-align:left}
+.history-table th{background:#fafbfc;color:#7b8494;font-size:9px;text-transform:uppercase;letter-spacing:.07em}
+.history-table td{font-size:11px}
+.payout-badge{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:700;background:var(--emerald-soft);color:#047857}
+@media(max-width:600px){.history-summary{grid-template-columns:1fr}}
+
+</style>
+</head>
+
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">₹</div>
+      <div>
+        <div class="brand-title">Wealth & Investment Tracker</div>
+        <div class="brand-sub">Your personal portfolio dashboard</div>
+      </div>
+    </div>
+    <div class="secure-pill">● Private local database</div>
+  </div>
+</header>
+
+<main class="container">
+
+  <section class="page-heading">
+    <div>
+      <div class="eyebrow">Portfolio overview</div>
+      <h1>Income & Investments</h1>
+      <p>Track your portfolio, income, upcoming payments and maturity dates in one place.</p>
+    </div>
+    <div class="heading-actions">
+      <button class="btn btn-secondary" onclick="loadAll()">↻ Refresh</button>
+      <button class="btn btn-primary" onclick="add()">＋ Add Investment</button>
+    </div>
+  </section>
+
+  <section class="kpis">
+    <div class="kpi">
+      <div class="kpi-label"><span class="kpi-dot"></span>Active Investments</div>
+      <div id="activeCount" class="kpi-value">0</div>
+      <div class="kpi-note">Currently active</div>
+    </div>
+    <div class="kpi sky">
+      <div class="kpi-label"><span class="kpi-dot"></span>Total Invested</div>
+      <div id="totalInvested" class="kpi-value">₹0</div>
+      <div class="kpi-note">Principal invested</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label"><span class="kpi-dot"></span>Current Value</div>
+      <div id="currentValue" class="kpi-value">₹0</div>
+      <div class="kpi-note">Latest portfolio value</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label"><span class="kpi-dot"></span>Annual Income</div>
+      <div id="annualIncome" class="kpi-value green">₹0</div>
+      <div class="kpi-note">Expected recurring income</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label"><span class="kpi-dot"></span>Received This Year</div>
+      <div id="receivedYear" class="kpi-value green">₹0</div>
+      <div class="kpi-note">Income received</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label"><span class="kpi-dot"></span>Maturing Soon</div>
+      <div id="maturingValue" class="kpi-value red">₹0</div>
+      <div class="kpi-note">Next 90 days</div>
+    </div>
+  </section>
+
+  <div class="dashboard-grid">
+    <div class="stack">
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Investment Portfolio</div>
+            <div class="panel-subtitle">Manage and monitor all your investments</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="filters">
+            <div class="search-wrap">
+              <span>⌕</span>
+              <input class="field-control" id="search" placeholder="Search investments..." oninput="loadInv()">
+            </div>
+            <select class="field-control" id="af" onchange="loadInv()">
+              <option>All</option><option>Bond</option><option>Stock</option>
+              <option>FD</option><option>RD</option><option>Mutual Fund</option><option>Other</option>
+            </select>
+            <select class="field-control" id="sf" onchange="loadInv()">
+              <option>All</option><option>Active</option><option>Disabled</option><option>Closed</option>
+            </select>
+            <button class="btn btn-secondary btn-icon" onclick="loadAll()" title="Refresh">↻</button>
+          </div>
+          <div id="table"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Upcoming Income</div>
+            <div class="panel-subtitle">Expected payments over the next 90 days</div>
+          </div>
+        </div>
+        <div class="panel-body"><div id="upcoming"></div></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Upcoming Maturities</div>
+            <div class="panel-subtitle">Investments reaching maturity within 90 days</div>
+          </div>
+        </div>
+        <div class="panel-body"><div id="maturity"></div></div>
+      </section>
+
+    </div>
+
+    <aside class="stack">
+
+      <section class="panel" id="investment-form-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Add / Edit Investment</div>
+            <div class="panel-subtitle">Keep your portfolio details up to date</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <form id="form" onsubmit="save(event)">
+            <input type="hidden" id="id">
+
+            <div class="form-section">
+              <div class="form-section-title">Investment details</div>
+              <div class="formgrid">
+                <div class="group">
+                  <label>Asset Type</label>
+                  <select id="asset">
+                    <option>Bond</option><option>Stock</option><option>FD</option>
+                    <option>RD</option><option>Mutual Fund</option><option>Other</option>
+                  </select>
+                </div>
+                <div class="group">
+                  <label>Name</label><input id="investmentName" required>
+                </div>
+                <div class="group">
+                  <label>Issuer / Company</label><input id="issuer">
+                </div>
+                <div class="group">
+                  <label>ISIN</label><input id="isin">
+                </div>
+                <div class="group full">
+                  <label>Account / Reference</label><input id="ref">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title">Investment value</div>
+              <div class="formgrid">
+                <div class="group">
+                  <label>Principal / Invested Amount</label>
+                  <input id="principal" type="number" step=".01" required>
+                </div>
+                <div class="group">
+                  <label>Current Value</label>
+                  <input id="value" type="number" step=".01">
+                </div>
+                <div class="group">
+                  <label>Units / Shares</label>
+                  <input id="units" type="number" step=".000001">
+                </div>
+                <div class="group">
+                  <label>Purchase Price</label>
+                  <input id="price" type="number" step=".01">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title">Income</div>
+              <div class="formgrid">
+                <div class="group">
+                  <label>Income Type</label>
+                  <select id="itype">
+                    <option>Interest</option><option>Dividend</option><option>Coupon</option>
+                    <option>Capital Gain</option><option>Other</option>
+                  </select>
+                </div>
+                <div class="group">
+                  <label>Income Frequency</label>
+                  <select id="freq">
+                    <option>Monthly</option><option>Quarterly</option>
+                    <option>Half-Yearly</option><option>Yearly</option><option>One-Time</option>
+                  </select>
+                </div>
+                <div class="group">
+                  <label>Interest / Coupon %</label><input id="rate" type="number" step=".0001">
+                </div>
+                <div class="group">
+                  <label>Expected Income Amount</label><input id="iamount" type="number" step=".01">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title">Dates & status</div>
+              <div class="formgrid">
+                <div class="group">
+                  <label>Purchase Date</label><input id="purchaseDate" type="date">
+                </div>
+                <div class="group">
+                  <label>Next Income Date</label><input id="nextIncome" type="date">
+                </div>
+                <div class="group">
+                  <label>Maturity Type</label>
+                  <select id="mtype" onchange="matChange()">
+                    <option>Fixed Maturity</option><option>Perpetual</option><option>No Maturity</option>
+                  </select>
+                </div>
+                <div class="group">
+                  <label>Maturity Date</label><input id="mdate" type="date">
+                </div>
+                <div class="group full">
+                  <label>Status</label>
+                  <select id="investmentStatus">
+                    <option>Active</option><option>Disabled</option><option>Closed</option>
+                  </select>
+                </div>
+                <div class="group full">
+                  <label>Notes</label><textarea id="notes"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn-primary" id="savebtn">Add Investment</button>
+              <button type="button" class="btn btn-secondary" onclick="reset()">Clear</button>
+              <span id="msg" class="form-message"></span>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Portfolio Allocation</div>
+            <div class="panel-subtitle">Investment by asset type</div>
+          </div>
+        </div>
+        <div class="panel-body"><div id="assets"></div></div>
+      </section>
+
+    </aside>
+  </div>
+</main>
+
+<div id="modal" class="modal">
+  <div class="modalbox">
+    <div class="modal-head">
+      <div class="modal-title">Record Income</div>
+      <button class="close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <form onsubmit="record(event)">
+        <input type="hidden" id="iid">
+        <div class="formgrid">
+          <div class="group"><label>Date</label><input id="idate" type="date" required></div>
+          <div class="group"><label>Amount</label><input id="iamt" type="number" step=".01" required></div>
+          <div class="group">
+            <label>Type</label>
+            <select id="ritype"><option>Interest</option><option>Dividend</option><option>Coupon</option><option>Capital Gain</option><option>Other</option></select>
+          </div>
+          <div class="group">
+            <label>Status</label>
+            <select id="rstatus"><option>Received</option><option>Expected</option><option>Cancelled</option></select>
+          </div>
+          <div class="group"><label>Received Date</label><input id="rdate" type="date"></div>
+          <div class="group full"><label>Notes</label><textarea id="rnotes"></textarea></div>
+        </div>
+        <div class="form-actions" style="margin-top:16px">
+          <button class="btn btn-primary">Save Income</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
 const money=x=>new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR"}).format(Number(x||0));
 const esc=x=>String(x??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
 async function api(u,o={}){let r=await fetch(u,o),d=await r.json();if(!r.ok)throw Error(d.error||"Request failed");return d}
 async function dash(){let d=await api("/api/dashboard");activeCount.textContent=d.active_count;totalInvested.textContent=money(d.total_invested);currentValue.textContent=money(d.current_value);annualIncome.textContent=money(d.annual_income);receivedYear.textContent=money(d.received_this_year);maturingValue.textContent=money(d.maturing_90_value)}
-async function loadInv(){let q=new URLSearchParams({search:search.value,status:sf.value,asset_type:af.value}),d=await api("/api/investments?"+q);window.inv=d.investments;if(!inv.length){table.innerHTML="<p>No investments found.</p>";return}table.innerHTML="<table><tr><th>Investment</th><th>Invested</th><th>Income</th><th>Next</th><th>Maturity</th><th>Status</th><th>Actions</th></tr>"+inv.map(x=>`<tr><td><b>${esc(x.name)}</b><div class=sub>${esc(x.asset_type)} · ${esc(x.issuer)}</div></td><td>${money(x.principal_amount)}</td><td>${x.income_amount?money(x.income_amount)+" / "+x.income_frequency:"—"}</td><td>${x.next_income_date||"—"}</td><td>${x.maturity_date||x.maturity_type}</td><td><span class="badge ${x.status.toLowerCase()}">${x.status}</span></td><td class=actions><button class=secondary onclick="edit(${x.id})">Edit</button><button class=secondary onclick="openIncome(${x.id})">Income</button>${x.status=="Active"?`<button class=warn onclick="setStatus(${x.id},'Disabled')">Disable</button>`:`<button class=success onclick="setStatus(${x.id},'Active')">Activate</button>`}${x.status!="Closed"?`<button class=danger onclick="setStatus(${x.id},'Closed')">Close</button>`:""}</td></tr>`).join("")+"</table>"}
-async function loadUpcoming(){let d=await api("/api/upcoming-income?days=90");upcoming.innerHTML=d.upcoming.length?d.upcoming.map(x=>`<div class=item><span><b>${esc(x.investment_name)}</b><div class=sub>${x.income_type} · ${x.income_date} · ${x.days_until} days</div></span><b>${money(x.amount)}</b></div>`).join(""):"<p>No upcoming income.</p>"}
-async function loadMat(){let d=await api("/api/maturities?days=90");maturity.innerHTML=d.maturities.length?d.maturities.map(x=>`<div class=item><span><b>${esc(x.name)}</b><div class=sub>${x.asset_type} · ${x.maturity_date} · ${x.days_until} days</div></span><b>${money(x.principal_amount)}</b></div>`).join(""):"<p>No upcoming maturities.</p>"}
-async function loadIncome(){let d=await api("/api/income?status=Received");income.innerHTML=d.income.length?"<table><tr><th>Date</th><th>Investment</th><th>Type</th><th>Amount</th></tr>"+d.income.map(x=>`<tr><td>${x.income_date}</td><td>${esc(x.investment_name)}</td><td>${x.income_type}</td><td>${money(x.amount)}</td></tr>`).join("")+"</table>":"<p>No income received yet.</p>"}
-async function loadAssets(){let d=await api("/api/asset-summary");assets.innerHTML=d.summary.map(x=>`<div class=item><span><b>${x.asset_type}</b><div class=sub>${x.count} investment(s)</div></span><b>${money(x.invested)}</b></div>`).join("")}
-async function loadAll(){try{await Promise.all([dash(),loadInv(),loadUpcoming(),loadMat(),loadIncome(),loadAssets()])}catch(e){console.error(e)}}
+async function loadInv(){let q=new URLSearchParams({search:search.value,status:sf.value,asset_type:af.value}),d=await api("/api/investments?"+q);window.inv=d.investments;if(!inv.length){table.innerHTML="<div class=\"empty\">No investments found.</div>";return}table.innerHTML="<div class=\"table-wrap\"><table><thead><tr><th>Investment</th><th>Invested</th><th>Income</th><th>Next</th><th>Maturity</th><th>Status</th><th>Actions</th></tr></thead><tbody>"+inv.map(x=>`<tr><td><b>${esc(x.name)}</b><div class=sub>${esc(x.asset_type)} · ${esc(x.issuer)}</div></td><td>${money(x.principal_amount)}</td><td>${x.income_amount?money(x.income_amount)+" / "+x.income_frequency:"—"}</td><td>${x.next_income_date||"—"}</td><td>${x.maturity_date||x.maturity_type}</td><td><span class="badge ${x.status.toLowerCase()}">${x.status}</span></td><td class=actions><button class=secondary onclick="edit(${x.id})">Edit</button><button class=secondary onclick="openIncome(${x.id})">Income</button><button class=secondary onclick="openHistory(${x.id})">History</button>${x.status=="Active"?`<button class=warn onclick="setStatus(${x.id},'Disabled')">Disable</button>`:`<button class=success onclick="setStatus(${x.id},'Active')">Activate</button>`}${x.status!="Closed"?`<button class=danger onclick="setStatus(${x.id},'Closed')">Close</button>`:""}</td></tr>`).join("")+"</tbody></table></div>"}
+async function loadUpcoming(){let d=await api("/api/upcoming-income?days=90");upcoming.innerHTML=d.upcoming.length?d.upcoming.map(x=>`<div class="list-item"><span><b>${esc(x.investment_name)}</b><div class=sub>${x.income_type} · ${x.income_date} · ${x.days_until} days</div></span><b>${money(x.amount)}</b></div>`).join(""):"<p>No upcoming income.</p>"}
+async function loadMat(){let d=await api("/api/maturities?days=90");maturity.innerHTML=d.maturities.length?d.maturities.map(x=>`<div class="list-item"><span><b>${esc(x.name)}</b><div class=sub>${x.asset_type} · ${x.maturity_date} · ${x.days_until} days</div></span><b>${money(x.principal_amount)}</b></div>`).join(""):"<p>No upcoming maturities.</p>"}
+async function loadIncome(){let d=await api("/api/income?status=Received");income.innerHTML=d.income.length?"<div class=\"table-wrap\"><table><tr><th>Date</th><th>Investment</th><th>Type</th><th>Amount</th></tr>"+d.income.map(x=>`<tr><td>${x.income_date}</td><td>${esc(x.investment_name)}</td><td>${x.income_type}</td><td>${money(x.amount)}</td></tr>`).join("")+"</table></div>":"<div class=\"empty\">No income received yet.</div>"}
+async function loadAssets(){let d=await api("/api/asset-summary");let max=Math.max(...d.summary.map(x=>Number(x.invested||0)),1);
+assets.innerHTML=d.summary.map(x=>`<div class="asset-row">
+  <div><div class="asset-name">${esc(x.asset_type)}</div><div class="asset-count">${x.count} investment(s)</div></div>
+  <div class="asset-bar"><div class="asset-fill" style="width:${Math.min(100,(Number(x.invested||0)/max)*100)}%"></div></div>
+  <div class="asset-value">${money(x.invested)}</div>
+</div>`).join("") || "<div class=\"empty\">No asset data.</div>"}
+
+async function openHistory(i){
+  try{
+    let investment = (window.inv || []).find(x => x.id == i);
+    if(!investment){
+      let d = await api("/api/investments/"+i);
+      investment = d.investment;
+    }
+
+    let d = await api("/api/income?status=Received");
+    // Match payouts to the selected investment by ID only.
+    // Falling back to the investment name can pull payouts from another
+    // investment that happens to have the same name.
+    let rows = (d.income || []).filter(x => {
+      const payoutInvestmentId = x.investment_id ?? x.investmentId;
+      return payoutInvestmentId != null && String(payoutInvestmentId) === String(i);
+    });
+
+    // Prevent the same payout record from appearing more than once if the
+    // API ever returns duplicate rows.
+    const seen = new Set();
+    rows = rows.filter(x => {
+      const key = x.id ?? x.income_id ?? x.incomeId ??
+        `${x.income_date}|${x.amount}|${x.income_type}|${x.received_date}`;
+      if (seen.has(String(key))) return false;
+      seen.add(String(key));
+      return true;
+    });
+
+    historyTitle.textContent = "Payout History";
+    historySubtitle.textContent = investment?.name || "Investment";
+
+    rows.sort((a,b) => String(b.income_date || "").localeCompare(String(a.income_date || "")));
+
+    const total = rows.reduce((sum,x) => sum + Number(x.amount || 0), 0);
+    const latest = rows.length ? (rows[0].income_date || "—") : "—";
+
+    historySummary.innerHTML = `
+      <div class="history-stat">
+        <div class="history-stat-label">Total Payouts</div>
+        <div class="history-stat-value">${rows.length}</div>
+      </div>
+      <div class="history-stat">
+        <div class="history-stat-label">Total Received</div>
+        <div class="history-stat-value green">${money(total)}</div>
+      </div>
+      <div class="history-stat">
+        <div class="history-stat-label">Latest Payout</div>
+        <div class="history-stat-value">${latest}</div>
+      </div>`;
+
+    if(!rows.length){
+      historyContent.innerHTML = '<div class="empty">No payouts recorded for this investment yet.</div>';
+    }else{
+      historyContent.innerHTML = `
+        <div class="table-wrap">
+          <table class="history-table">
+            <thead><tr>
+              <th>Date</th><th>Type</th><th>Amount</th><th>Received Date</th><th>Status</th>
+            </tr></thead>
+            <tbody>
+              ${rows.map(x => `
+                <tr>
+                  <td>${x.income_date || "—"}</td>
+                  <td>${esc(x.income_type || "—")}</td>
+                  <td><strong>${money(x.amount)}</strong></td>
+                  <td>${x.received_date || "—"}</td>
+                  <td><span class="payout-badge">${esc(x.status || "Received")}</span></td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    historyModal.classList.add("open");
+  }catch(e){ alert(e.message); }
+}
+
+function closeHistory(){
+  historyModal.classList.remove("open");
+}
+
+async function loadAll(){try{await Promise.all([dash(),loadInv(),loadUpcoming(),loadMat(),loadAssets()])}catch(e){console.error(e)}}
 function reset(){form.reset();id.value="";asset.value="Bond";itype.value="Interest";freq.value="Yearly";mtype.value="Fixed Maturity";investmentStatus.value="Active";savebtn.textContent="Add Investment";msg.textContent="";matChange()}
 function add(){reset();form.scrollIntoView({behavior:"smooth"})}
 function matChange(){mdate.disabled=mtype.value!="Fixed Maturity";if(mdate.disabled)mdate.value=""}
@@ -49,4 +741,23 @@ function openIncome(i){let x=inv.find(x=>x.id==i);iid.value=i;idate.value=new Da
 function closeModal(){modal.classList.remove("open")}
 async function record(e){e.preventDefault();try{await api("/api/investments/"+iid.value+"/income",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({income_date:idate.value,amount:+iamt.value,income_type:ritype.value,status:rstatus.value,received_date:rdate.value||null,notes:rnotes.value})});closeModal();loadAll()}catch(e){alert(e.message)}}
 reset();loadAll();
-</script></body></html>
+</script>
+
+<div id="historyModal" class="modal">
+  <div class="modalbox">
+    <div class="modal-head">
+      <div>
+        <div id="historyTitle" class="modal-title">Payout History</div>
+        <div id="historySubtitle" class="panel-subtitle"></div>
+      </div>
+      <button class="close" onclick="closeHistory()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="historySummary" class="history-summary"></div>
+      <div id="historyContent"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

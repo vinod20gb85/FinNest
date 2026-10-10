@@ -174,6 +174,18 @@ tr:last-child td{border-bottom:0}
     .form-group.full{grid-column:auto}
     .panel-header{align-items:flex-start;flex-direction:column}
 }
+
+.gmail-panel{
+    margin-top:18px;padding:16px 18px;border:1px solid #dbeafe;
+    background:linear-gradient(135deg,#eff6ff,#fff);border-radius:16px;
+}
+.gmail-panel strong{font-size:14px}.gmail-panel p{margin:5px 0 12px;color:var(--muted);font-size:13px}
+.gmail-status{font-size:12px;color:var(--muted);margin-left:8px}
+.gmail-candidate{border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;background:#fff}
+.gmail-candidate:last-child{margin-bottom:0}.gmail-candidate-top{display:flex;justify-content:space-between;gap:12px}
+.gmail-meta{font-size:12px;color:var(--muted);margin-top:5px}.confidence{font-size:11px;border-radius:999px;padding:4px 8px;background:var(--green-bg);color:var(--green);white-space:nowrap}
+.gmail-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.gmail-modal{width:min(900px,100%)}
 </style>
 </head>
 <body>
@@ -222,7 +234,10 @@ tr:last-child td{border-bottom:0}
                 <h2 class="panel-title">My Subscriptions</h2>
                 <p class="panel-description">Add, update, pause or cancel subscriptions.</p>
             </div>
-            <button onclick="openAdd()">＋ Add Subscription</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+                <button class="secondary" onclick="scanGmail()">📧 Scan Gmail</button>
+                <button onclick="openAdd()">＋ Add Subscription</button>
+            </div>
         </div>
 
         <div class="filter-row">
@@ -341,6 +356,20 @@ tr:last-child td{border-bottom:0}
 
 <footer class="footer">Subscription Manager · Separate subscriptions.db · Private local app</footer>
 </main>
+</div>
+
+
+<div id="gmailModal" class="modal" onclick="if(event.target===this) closeGmail()">
+    <div class="modal-box gmail-modal">
+        <div class="modal-header">
+            <div>
+                <h2 id="gmailTitle">Gmail Subscription Scanner</h2>
+                <div class="subtext" id="gmailStatusText">Read-only scan. Nothing is added automatically.</div>
+            </div>
+            <button class="close" onclick="closeGmail()">×</button>
+        </div>
+        <div id="gmailContent">Loading...</div>
+    </div>
 </div>
 
 <div id="historyModal" class="modal" onclick="if(event.target===this) closeHistory()">
@@ -635,6 +664,91 @@ async function recordPayment(id){
     }
 }
 
+async function scanGmail(){
+    const modal = document.getElementById("gmailModal");
+    const box = document.getElementById("gmailContent");
+    modal.classList.add("open");
+    box.innerHTML = '<div class="empty">Checking Gmail connection...</div>';
+
+    try{
+        const status = await api("/api/gmail/status");
+
+        if(!status.available){
+            box.innerHTML = `<div class="gmail-panel"><strong>Gmail support is not installed</strong><p>${esc(status.reason || "Install the Gmail dependencies on the machine running Flask.")}</p><div class="gmail-actions"><button onclick="closeGmail()">Close</button></div></div>`;
+            return;
+        }
+
+        if(!status.connected){
+            // Browser navigation starts the normal Google SSO/OAuth flow.
+            window.location.href = "/api/gmail/connect";
+            return;
+        }
+
+        await runGmailScan();
+    }catch(error){
+        box.innerHTML = `<div class="gmail-panel"><strong>Gmail scan failed</strong><p>${esc(error.message)}</p></div>`;
+    }
+}
+
+function connectGmail(){
+    window.location.href = "/api/gmail/connect";
+}
+
+async function runGmailScan(){
+    const box = document.getElementById("gmailContent");
+    box.innerHTML = '<div class="empty">Scanning recent Gmail messages for subscription, renewal and payment emails...</div>';
+    const data = await api("/api/gmail/scan",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({max_results:50,newer_than:"180d"})
+    });
+
+    if(!data.candidates.length){
+        box.innerHTML = '<div class="empty">No likely subscription emails were found in the last 180 days.</div>';
+        return;
+    }
+
+    box.innerHTML = data.candidates.map((c,i)=>`
+        <div class="gmail-candidate">
+            <div class="gmail-candidate-top">
+                <div>
+                    <div class="name">${esc(c.name)} · ${money(c.amount)}</div>
+                    <div class="gmail-meta">${esc(c.billing_cycle)} · Next payment: ${esc(c.next_payment_date)} · ${esc(c.category)}</div>
+                    <div class="gmail-meta">${esc(c.email_subject || "")} · ${esc(c.email_from || "")}</div>
+                </div>
+                <span class="confidence">${esc(c.confidence || "Medium")}</span>
+            </div>
+            ${c.existing_match ? '<div class="gmail-meta" style="color:var(--orange);margin-top:8px">⚠ A subscription with this provider already exists. Review before importing.</div>' : ''}
+            <div class="gmail-actions">
+                <button onclick="importGmailCandidate(${i})" ${c.existing_match ? 'class="secondary"' : ''}>${c.existing_match ? 'Review / Add Anyway' : 'Add Subscription'}</button>
+            </div>
+        </div>`).join("");
+    window.gmailCandidates = data.candidates;
+}
+
+async function importGmailCandidate(index){
+    const c = (window.gmailCandidates || [])[index];
+    if(!c) return;
+    if(c.existing_match && !confirm("A subscription with this provider already exists. Add another record anyway?")) return;
+
+    try{
+        await api("/api/gmail/import",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify(c)
+        });
+        c.imported = true;
+        await loadAll();
+        await runGmailScan();
+    }catch(error){
+        alert(error.message);
+    }
+}
+
+function closeGmail(){
+    document.getElementById("gmailModal").classList.remove("open");
+}
+
 async function loadAll(){
     try{
         await Promise.all([
@@ -648,9 +762,42 @@ async function loadAll(){
     }
 }
 
-document.addEventListener("DOMContentLoaded",()=>{
+function cleanGmailCallbackUrl(){
+    // Use the native History API without relying on a potentially shadowed
+    // window.history.replaceState property.
+    const cleanUrl = "/subscriptions";
+    const historyApi = window.history;
+    if (historyApi && typeof historyApi.replaceState === "function") {
+        historyApi.replaceState({}, document.title, cleanUrl);
+    } else {
+        window.location.replace(cleanUrl);
+    }
+}
+
+document.addEventListener("DOMContentLoaded",async ()=>{
     resetForm();
-    loadAll();
+    await loadAll();
+
+    const params = new URLSearchParams(window.location.search);
+    const gmailResult = params.get("gmail");
+
+    if(gmailResult === "connected"){
+        cleanGmailCallbackUrl();
+        const modal = document.getElementById("gmailModal");
+        modal.classList.add("open");
+        document.getElementById("gmailContent").innerHTML = '<div class="empty">Google authorization completed. Scanning recent Gmail messages...</div>';
+        try{
+            await runGmailScan();
+        }catch(error){
+            document.getElementById("gmailContent").innerHTML = `<div class="gmail-panel"><strong>Gmail scan failed</strong><p>${esc(error.message)}</p></div>`;
+        }
+    }else if(gmailResult === "error"){
+        const message = params.get("message") || "Google authorization was not completed.";
+        cleanGmailCallbackUrl();
+        const modal = document.getElementById("gmailModal");
+        modal.classList.add("open");
+        document.getElementById("gmailContent").innerHTML = `<div class="gmail-panel"><strong>Google authorization failed</strong><p>${esc(message)}</p><div class="gmail-actions"><button onclick="closeGmail()">Close</button></div></div>`;
+    }
 });
 </script>
 </body>
