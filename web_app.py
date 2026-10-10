@@ -3,15 +3,22 @@ from flask import (
     jsonify,
     render_template,
     request,
+    redirect,
+    session,
 )
+import os
 from datetime import datetime
+from urllib.parse import quote
 
 import app
 import subscription_app as subscription
 from income_routes import income_bp
+from dotenv import load_dotenv
+
+load_dotenv()
 
 server = Flask(__name__)
-
+server.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(32)
 server.register_blueprint(income_bp)
 
 HOST = "0.0.0.0"
@@ -202,6 +209,98 @@ def add_transaction():
 @server.route("/subscriptions")
 def subscriptions_page():
     return render_template("subscriptions.html")
+
+
+@server.route("/api/gmail/status")
+def gmail_status():
+    try:
+        return jsonify(subscription.gmail_status())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def _gmail_redirect_uri():
+    configured = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
+    if configured:
+        return configured
+    return request.url_root.rstrip("/") + "/api/gmail/oauth2callback"
+
+
+@server.route("/api/gmail/connect")
+def gmail_connect():
+    try:
+        status = subscription.gmail_status()
+        if not status.get("available"):
+            return jsonify(status), 400
+
+        redirect_uri = _gmail_redirect_uri()
+        oauth = subscription.begin_gmail_oauth(redirect_uri)
+        session["gmail_oauth_state"] = oauth["state"]
+        session["gmail_oauth_code_verifier"] = oauth.get("code_verifier")
+        session["gmail_oauth_redirect_uri"] = redirect_uri
+
+        # Browser navigation takes the user directly to Google's sign-in/consent page.
+        return redirect(oauth["authorization_url"])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@server.route("/api/gmail/oauth2callback")
+def gmail_oauth_callback():
+    error = request.args.get("error")
+    if error:
+        return redirect("/subscriptions?gmail=error&message=" + quote(error))
+
+    state = session.pop("gmail_oauth_state", None)
+    code_verifier = session.pop("gmail_oauth_code_verifier", None)
+    redirect_uri = session.pop("gmail_oauth_redirect_uri", None) or _gmail_redirect_uri()
+
+    if not state:
+        return redirect("/subscriptions?gmail=error&message=OAuth%20session%20expired")
+
+    try:
+        subscription.complete_gmail_oauth(
+            request.url,
+            state,
+            redirect_uri,
+            code_verifier,
+        )
+        return redirect("/subscriptions?gmail=connected")
+    except Exception as e:
+        return redirect("/subscriptions?gmail=error&message=" + quote(str(e)))
+
+
+@server.route("/api/gmail/scan", methods=["POST"])
+def gmail_scan():
+    try:
+        data = request.get_json(silent=True) or {}
+        max_results = int(data.get("max_results", 50))
+        newer_than = str(data.get("newer_than", "180d"))
+        return jsonify({
+            "candidates": subscription.scan_gmail_subscriptions(
+                max_results=max_results, newer_than=newer_than
+            )
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+@server.route("/api/gmail/import", methods=["POST"])
+def gmail_import():
+    try:
+        data = request.get_json(silent=True) or {}
+        candidate = dict(data)
+        for key in ("message_id", "thread_id", "email_subject", "email_from", "email_date", "confidence", "existing_match"):
+            candidate.pop(key, None)
+
+        existing = subscription.list_subscriptions(status="All", search=candidate.get("name", ""))
+        if any(x["name"].strip().lower() == str(candidate.get("name", "")).strip().lower() for x in existing):
+            return jsonify({"error": "A subscription with this name already exists."}), 409
+
+        item = subscription.add_subscription(candidate)
+        return jsonify({"subscription": item}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 
 @server.route("/api/subscription-summary")

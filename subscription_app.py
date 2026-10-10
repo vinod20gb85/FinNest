@@ -1,7 +1,14 @@
 import sqlite3
 import os
+import re
+import base64
+import html as html_lib
 from datetime import datetime, date, timedelta
 from calendar import monthrange
+from email.utils import parsedate_to_datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, "subscriptions.db")
@@ -13,6 +20,391 @@ DEFAULT_CATEGORIES = (
     "Video", "Shopping", "Fitness", "Education", "Other"
 )
 
+
+# ============================================================
+# Gmail subscription scanner - Web OAuth
+# ============================================================
+# Gmail integration uses Google OAuth in the browser. The user does not
+# need to download or manage a credentials.json file. OAuth client values
+# are supplied to the server through environment variables.
+GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+GMAIL_TOKEN_FILE = os.path.join(BASE_DIR, "gmail_token.json")
+GOOGLE_CLIENT_ID_ENV = "GOOGLE_CLIENT_ID"
+GOOGLE_CLIENT_SECRET_ENV = "GOOGLE_CLIENT_SECRET"
+
+
+def _google_oauth_config(redirect_uri):
+    client_id = os.environ.get(GOOGLE_CLIENT_ID_ENV, "").strip()
+    client_secret = os.environ.get(GOOGLE_CLIENT_SECRET_ENV, "").strip()
+
+    if not client_id or not client_secret:
+        raise RuntimeError(
+            "Google OAuth is not configured. Set GOOGLE_CLIENT_ID and "
+            "GOOGLE_CLIENT_SECRET on the machine running Flask."
+        )
+
+    return {
+        "web": {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [redirect_uri],
+        }
+    }
+
+
+def gmail_status():
+    """Return Gmail integration readiness without starting OAuth."""
+    try:
+        from googleapiclient.discovery import build  # noqa: F401
+        from google_auth_oauthlib.flow import Flow  # noqa: F401
+        from google.oauth2.credentials import Credentials  # noqa: F401
+    except ImportError:
+        return {
+            "available": False,
+            "connected": False,
+            "reason": "Gmail packages are not installed."
+        }
+
+    if not os.environ.get(GOOGLE_CLIENT_ID_ENV) or not os.environ.get(GOOGLE_CLIENT_SECRET_ENV):
+        return {
+            "available": True,
+            "connected": False,
+            "reason": "Google OAuth is not configured on the server."
+        }
+
+    try:
+        from google.auth.transport.requests import Request
+        from google.oauth2.credentials import Credentials
+        creds = Credentials.from_authorized_user_file(
+            GMAIL_TOKEN_FILE, GMAIL_SCOPES
+        ) if os.path.exists(GMAIL_TOKEN_FILE) else None
+
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            with open(GMAIL_TOKEN_FILE, "w", encoding="utf-8") as token:
+                token.write(creds.to_json())
+
+        return {
+            "available": True,
+            "connected": bool(creds and creds.valid),
+            "reason": None if creds and creds.valid else "Google authorization is required."
+        }
+    except Exception as exc:
+        return {
+            "available": True,
+            "connected": False,
+            "reason": str(exc)
+        }
+
+
+def begin_gmail_oauth(redirect_uri):
+    """Create a Google authorization URL for the browser."""
+    try:
+        from google_auth_oauthlib.flow import Flow
+    except ImportError as exc:
+        raise RuntimeError(
+            "Gmail support requires google-api-python-client, "
+            "google-auth-httplib2 and google-auth-oauthlib."
+        ) from exc
+
+    flow = Flow.from_client_config(
+        _google_oauth_config(redirect_uri),
+        scopes=GMAIL_SCOPES,
+    )
+    flow.redirect_uri = redirect_uri
+
+    authorization_url, state = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        prompt="consent",
+    )
+
+    return {
+        "authorization_url": authorization_url,
+        "state": state,
+        "code_verifier": getattr(flow, "code_verifier", None),
+    }
+
+
+def complete_gmail_oauth(authorization_response, state, redirect_uri, code_verifier=None):
+    """Exchange Google's authorization response for and persist Gmail tokens."""
+    try:
+        from google_auth_oauthlib.flow import Flow
+    except ImportError as exc:
+        raise RuntimeError(
+            "Gmail support requires google-api-python-client, "
+            "google-auth-httplib2 and google-auth-oauthlib."
+        ) from exc
+
+    flow = Flow.from_client_config(
+        _google_oauth_config(redirect_uri),
+        scopes=GMAIL_SCOPES,
+        state=state,
+    )
+    flow.redirect_uri = redirect_uri
+
+    # Google OAuth may use PKCE. The authorization request created a
+    # code_verifier which must be restored on the callback flow before
+    # exchanging the authorization code for tokens.
+    if code_verifier:
+        flow.code_verifier = code_verifier
+
+    flow.fetch_token(authorization_response=authorization_response)
+
+    token_json = flow.credentials.to_json()
+    with open(GMAIL_TOKEN_FILE, "w", encoding="utf-8") as token:
+        token.write(token_json)
+
+    try:
+        os.chmod(GMAIL_TOKEN_FILE, 0o600)
+    except OSError:
+        pass
+
+    if not os.path.isfile(GMAIL_TOKEN_FILE) or os.path.getsize(GMAIL_TOKEN_FILE) == 0:
+        raise RuntimeError("Google authorization completed, but gmail_token.json could not be saved.")
+
+    return gmail_status()
+
+
+def _gmail_service():
+    """Create an authenticated Gmail read-only service using the saved OAuth token."""
+    try:
+        from google.auth.transport.requests import Request
+        from google.oauth2.credentials import Credentials
+        from googleapiclient.discovery import build
+    except ImportError as exc:
+        raise RuntimeError(
+            "Gmail support requires google-api-python-client, "
+            "google-auth-httplib2 and google-auth-oauthlib."
+        ) from exc
+
+    if not os.path.exists(GMAIL_TOKEN_FILE):
+        raise RuntimeError("Gmail is not connected. Click Scan Gmail and authorize Google access.")
+
+    creds = Credentials.from_authorized_user_file(
+        GMAIL_TOKEN_FILE, GMAIL_SCOPES
+    )
+
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        with open(GMAIL_TOKEN_FILE, "w", encoding="utf-8") as token:
+            token.write(creds.to_json())
+
+    if not creds.valid:
+        raise RuntimeError("Gmail authorization has expired. Click Scan Gmail to reconnect.")
+
+    return build("gmail", "v1", credentials=creds, cache_discovery=False)
+
+
+def connect_gmail():
+    """Backward-compatible status helper; OAuth itself is browser-driven."""
+    return gmail_status()
+
+
+
+def _decode_gmail_part(part):
+    data = part.get("body", {}).get("data")
+    if data:
+        try:
+            return base64.urlsafe_b64decode(data + "===").decode("utf-8", errors="replace")
+        except Exception:
+            return ""
+
+    text_parts = []
+    for child in part.get("parts", []) or []:
+        text_parts.append(_decode_gmail_part(child))
+    return "\n".join(x for x in text_parts if x)
+
+def _plain_email_text(raw):
+    raw = html_lib.unescape(raw or "")
+    raw = re.sub(r"<br\s*/?>", "\n", raw, flags=re.I)
+    raw = re.sub(r"</p>|</div>|</tr>|</li>", "\n", raw, flags=re.I)
+    raw = re.sub(r"<[^>]+>", " ", raw)
+    raw = re.sub(r"[ \t]+", " ", raw)
+    raw = re.sub(r"\n[ \t]+", "\n", raw)
+    return raw.strip()
+
+def _header(headers, name):
+    wanted = name.lower()
+    for h in headers or []:
+        if h.get("name", "").lower() == wanted:
+            return h.get("value", "")
+    return ""
+
+def _parse_amount(text):
+    patterns = [
+        r"(?:₹|Rs\.?|INR)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)",
+        r"(?:USD|US\$|\$)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)",
+        r"(?:EUR|€)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.I)
+        if match:
+            value = float(match.group(1).replace(",", ""))
+            currency = "INR" if "₹" in match.group(0) or re.search(r"Rs|INR", match.group(0), re.I) else "USD"
+            if "EUR" in match.group(0) or "€" in match.group(0):
+                currency = "EUR"
+            return value, currency
+    return None, "INR"
+
+def _parse_date(text, keywords=None):
+    patterns = [
+        r"\b(20\d{2}-\d{2}-\d{2})\b",
+        r"\b(\d{1,2}[/-]\d{1,2}[/-]20\d{2})\b",
+        r"\b([A-Z][a-z]{2,8}\s+\d{1,2},\s+20\d{2})\b",
+    ]
+    source = text
+    if keywords:
+        for keyword in keywords:
+            m = re.search(keyword + r".{0,100}", text, flags=re.I | re.S)
+            if m:
+                source = m.group(0)
+                break
+    for pattern in patterns:
+        m = re.search(pattern, source)
+        if not m:
+            continue
+        raw = m.group(1)
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y", "%m-%d-%Y", "%B %d, %Y", "%b %d, %Y"):
+            try:
+                return datetime.strptime(raw, fmt).date().isoformat()
+            except ValueError:
+                pass
+    return None
+
+def _frequency(text):
+    if re.search(r"monthly|per month|each month|every month", text, re.I):
+        return "Monthly"
+    if re.search(r"quarterly|every 3 months", text, re.I):
+        return "Quarterly"
+    if re.search(r"half[- ]yearly|semi[- ]annual|every 6 months", text, re.I):
+        return "Half-Yearly"
+    if re.search(r"annual|annually|yearly|per year|every year", text, re.I):
+        return "Yearly"
+    return "Monthly"
+
+def _category(name, sender, text):
+    hay = f"{name} {sender} {text}".lower()
+    if any(x in hay for x in ("netflix", "prime video", "disney", "hotstar", "youtube", "spotify", "music")):
+        return "Entertainment"
+    if any(x in hay for x in ("github", "microsoft 365", "office 365", "adobe", "canva", "notion", "dropbox", "software")):
+        return "Software"
+    if any(x in hay for x in ("icloud", "google one", "google storage", "onedrive", "cloud")):
+        return "Cloud"
+    if any(x in hay for x in ("news", "times", "newspaper")):
+        return "News"
+    if "fitness" in hay or "gym" in hay:
+        return "Fitness"
+    if "education" in hay or "coursera" in hay or "udemy" in hay:
+        return "Education"
+    return "Other"
+
+def _provider_name(sender, subject):
+    match = re.match(r"\s*(.*?)\s*<([^>]+)>", sender or "")
+    display = match.group(1).strip().strip('"') if match else ""
+    address = match.group(2) if match else sender
+    if display:
+        return display
+    if address and "@" in address:
+        return address.split("@", 1)[0].replace(".", " ").replace("-", " ").title()
+    return subject.split(" ", 1)[0] if subject else "Unknown"
+
+def _candidate_from_message(message):
+    payload = message.get("payload", {})
+    headers = payload.get("headers", [])
+    sender = _header(headers, "From")
+    subject = _header(headers, "Subject")
+    received = _header(headers, "Date")
+    body = _plain_email_text(_decode_gmail_part(payload))
+    text = f"{subject}\n{body}"[:30000]
+
+    amount, currency = _parse_amount(text)
+    next_date = _parse_date(text, [
+        r"next payment date", r"next billing date", r"next charge", r"renews? on", r"renewal date", r"renew[s]? on"
+    ])
+    if not next_date:
+        next_date = _parse_date(text)
+
+    frequency = _frequency(text)
+    name = _provider_name(sender, subject)
+    category = _category(name, sender, text)
+
+    try:
+        email_date = parsedate_to_datetime(received).date().isoformat() if received else None
+    except Exception:
+        email_date = None
+
+    # If the email is a payment/renewal notice but does not state the next
+    # billing date, estimate it from the email date and detected billing cycle.
+    if not next_date and email_date:
+        base = date.fromisoformat(email_date)
+        months = {"Monthly": 1, "Quarterly": 3, "Half-Yearly": 6, "Yearly": 12}[frequency]
+        target_month = base.month - 1 + months
+        year = base.year + target_month // 12
+        month = target_month % 12 + 1
+        day = min(base.day, monthrange(year, month)[1])
+        next_date = date(year, month, day).isoformat()
+
+    # A subscription email should contain at least a billing/payment signal.
+    signal = re.search(r"subscription|renew|renewal|billing|bill|invoice|receipt|membership|payment|charged|charge|trial", text, re.I)
+    if not signal or amount is None:
+        return None
+
+    return {
+        "message_id": message.get("id"),
+        "thread_id": message.get("threadId"),
+        "name": name,
+        "amount": round(amount, 2),
+        "currency": currency,
+        "billing_cycle": frequency,
+        "next_payment_date": next_date or date.today().isoformat(),
+        "start_date": email_date,
+        "category": category,
+        "payment_method": "",
+        "status": "Active",
+        "auto_renew": True,
+        "description": f"Detected from Gmail: {subject}" if subject else "Detected from Gmail",
+        "email_subject": subject,
+        "email_from": sender,
+        "email_date": email_date,
+        "confidence": "High" if next_date and amount else "Medium",
+    }
+
+def scan_gmail_subscriptions(max_results=50, newer_than="180d"):
+    """Find likely subscription/renewal emails and return reviewable candidates."""
+    service = _gmail_service()
+    query = (
+        f"newer_than:{newer_than} "
+        "{subscription renewal billing invoice receipt membership payment charged charge}"
+    )
+    response = service.users().messages().list(
+        userId="me", q=query, maxResults=max(1, min(int(max_results), 100))
+    ).execute()
+
+    existing = list_subscriptions(status="All")
+    existing_names = {re.sub(r"[^a-z0-9]", "", x["name"].lower()) for x in existing}
+    candidates = []
+    seen = set()
+
+    for ref in response.get("messages", []):
+        message = service.users().messages().get(
+            userId="me", id=ref["id"], format="full"
+        ).execute()
+        candidate = _candidate_from_message(message)
+        if not candidate:
+            continue
+
+        key = re.sub(r"[^a-z0-9]", "", candidate["name"].lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        candidate["existing_match"] = key in existing_names
+        candidates.append(candidate)
+
+    return candidates
 
 def get_connection():
     conn = sqlite3.connect(DB_FILE)
