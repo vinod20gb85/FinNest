@@ -2,7 +2,7 @@ import sqlite3
 from datetime import datetime
 
 
-DB_FILE = "finance.db"
+DB_FILE = "db/finance.db"
 
 
 # -----------------------------

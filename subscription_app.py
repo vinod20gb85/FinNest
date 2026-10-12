@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_FILE = os.path.join(BASE_DIR, "subscriptions.db")
+DB_FILE = os.path.join(BASE_DIR, "db/subscriptions.db")
 
 BILLING_CYCLES = ("Monthly", "Quarterly", "Half-Yearly", "Yearly")
 STATUSES = ("Active", "Paused", "Cancelled")

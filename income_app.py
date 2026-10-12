@@ -5,7 +5,7 @@ from calendar import monthrange
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_FILE = os.path.join(BASE_DIR, "income.db")
+DB_FILE = os.path.join(BASE_DIR, "db/income.db")
 ASSET_TYPES = ("Bond","Stock","FD","RD","Mutual Fund","Other")
 STATUSES = ("Active","Disabled","Closed")
 INCOME_TYPES = ("Interest","Dividend","Coupon","Capital Gain","Other")
